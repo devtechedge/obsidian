@@ -17,6 +17,9 @@ tailwind.config = {
   theme: {
     extend: {
       fontFamily: { inter: ['Inter', 'sans-serif'] },
+      screens: {
+        xs: '425px',
+      },
       colors: {
         gallery: { DEFAULT: '#f4f3ef', dark: '#e8e7e3', light: '#faf9f6' },
         accent: { DEFAULT: '#dc2626', hover: '#ef4444', deep: '#991b1b' }
@@ -33,6 +36,9 @@ tailwind.config = {
 <!-- Lenis Smooth Scroll -->
 <script src="https://unpkg.com/lenis@1.1.18/dist/lenis.min.js"></script>
 
+<!-- Three.js (UMD, module-free) -->
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+
 <style>
   /* ── Reset & Base ── */
   *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -41,17 +47,60 @@ tailwind.config = {
     scroll-behavior: auto;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+    max-width: 100vw;
   }
 
   body {
     font-family: 'Inter', sans-serif;
-    background: #f4f3ef;
-    color: #171717;
+    background: var(--bg-primary);
+    color: var(--text-primary);
     overflow-x: hidden;
+    max-width: 100vw;
     cursor: none;
+    transition: background-color 0.6s ease, color 0.6s ease;
   }
 
-  /* ── Hero Canvas ── */
+  /* ── Theme Variables ── */
+  :root {
+    --bg-primary: #f4f3ef;
+    --bg-secondary: #e8e7e3;
+    --bg-overlay: rgba(244, 243, 239, 0.9);
+    --text-primary: #171717;
+    --text-secondary: #525252;
+    --text-muted: #737373;
+    --text-faint: #a3a3a3;
+    --text-ghost: #d4d4d4;
+    --border-color: rgba(0,0,0,0.08);
+    --border-strong: rgba(0,0,0,0.14);
+    --pattern-fill: #e8e7e3;
+    --overlay-grad: rgba(23,23,23,0.85);
+    --overlay-soft: rgba(23,23,23,0.4);
+    --overlay-text: #f5f5f5;
+    --scrollbar-track: #f4f3ef;
+    --scrollbar-thumb: #c4c3bf;
+  }
+
+  body.theme-dark {
+    --bg-primary: #0a0a0a;
+    --bg-secondary: #141414;
+    --bg-overlay: rgba(10, 10, 10, 0.9);
+    --text-primary: #f5f5f5;
+    --text-secondary: #a3a3a3;
+    --text-muted: #737373;
+    --text-faint: #525252;
+    --text-ghost: #2a2a2a;
+    --border-color: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.14);
+    --pattern-fill: #141414;
+    --overlay-grad: rgba(10,10,10,0.85);
+    --overlay-soft: rgba(10,10,10,0.4);
+    --overlay-text: #f5f5f5;
+    --scrollbar-track: #0a0a0a;
+    --scrollbar-thumb: #2a2a2a;
+  }
+
+  /* ── Hero Canvas (2D particles) ── */
   #heroCanvas {
     position: absolute;
     top: 0;
@@ -60,6 +109,375 @@ tailwind.config = {
     height: 100%;
     pointer-events: none;
     z-index: 0;
+  }
+
+  /* ── Hero WebGL Crystal ── */
+  #heroCrystal {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: auto;
+    z-index: 1;
+  }
+
+  /* ── Preloader ── */
+  #preloader {
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    background: var(--bg-primary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.8s cubic-bezier(0.16,1,0.3,1),
+                visibility 0.8s cubic-bezier(0.16,1,0.3,1);
+  }
+
+  #preloader.hidden {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .preloader-logo {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 40px;
+    animation: logoFloat 2s ease-in-out infinite;
+  }
+
+  @keyframes logoFloat {
+    0%, 100% { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(180deg) scale(1.1); }
+  }
+
+  .preloader-logo svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .preloader-logo polygon, .preloader-logo rect {
+    animation: logoPulse 1.5s ease-in-out infinite;
+    transform-origin: center;
+  }
+
+  @keyframes logoPulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+
+  .preloader-text {
+    font-size: 11px;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 24px;
+  }
+
+  .preloader-progress {
+    width: 200px;
+    height: 1px;
+    background: var(--border-strong);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .preloader-progress-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: #dc2626;
+    width: 0%;
+    transition: width 0.2s ease;
+  }
+
+  .preloader-percentage {
+    margin-top: 16px;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  /* ── Scroll Progress Bar ── */
+  #scrollProgressBar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 2px;
+    background: #dc2626;
+    z-index: 99997;
+    width: 0%;
+    transition: width 0.05s linear;
+  }
+
+  /* ── Scroll Progress Ring ── */
+  #scrollProgressRing {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+    z-index: 99997;
+    pointer-events: none;
+  }
+
+  #scrollProgressRing svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+
+  #scrollProgressRing .ring-bg {
+    fill: none;
+    stroke: var(--border-strong);
+    stroke-width: 2;
+  }
+
+  #scrollProgressRing .ring-fg {
+    fill: none;
+    stroke: #dc2626;
+    stroke-width: 2;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.1s linear;
+  }
+
+  #scrollProgressRing .ring-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Theme Toggle ── */
+  #themeToggle {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--bg-overlay);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: none;
+    z-index: 99997;
+    transition: all 0.3s ease;
+    pointer-events: auto;
+  }
+
+  #themeToggle:hover {
+    border-color: #dc2626;
+    transform: scale(1.05);
+  }
+
+  #themeToggle svg {
+    width: 20px;
+    height: 20px;
+    stroke: var(--text-primary);
+    transition: opacity 0.3s ease, transform 0.4s ease;
+  }
+
+  #themeToggle .sun-icon { display: none; }
+  #themeToggle .moon-icon { display: block; }
+  body.theme-dark #themeToggle .sun-icon { display: block; }
+  body.theme-dark #themeToggle .moon-icon { display: none; }
+
+  /* ── Cursor Trail Canvas ── */
+  #cursorTrail {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 99997;
+    mix-blend-mode: multiply;
+  }
+
+  body.theme-dark #cursorTrail {
+    mix-blend-mode: screen;
+  }
+
+  /* ── Particle Burst Canvas ── */
+  #burstCanvas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 99996;
+  }
+
+  /* ── Lightbox Modal ── */
+  #lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 99995;
+    background: rgba(0,0,0,0.92);
+    backdrop-filter: blur(20px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s ease, visibility 0.4s ease;
+    padding: 80px 40px;
+  }
+
+  #lightbox.open {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .lightbox-content {
+    max-width: 1000px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+    transform: scale(0.92);
+    transition: transform 0.5s cubic-bezier(0.16,1,0.3,1);
+  }
+
+  #lightbox.open .lightbox-content {
+    transform: scale(1);
+  }
+
+  .lightbox-image {
+    background: #e8e7e3;
+    aspect-ratio: 4/3;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .lightbox-image svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .lightbox-meta {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .lightbox-title {
+    font-size: clamp(1.75rem, 4vw, 2.75rem);
+    font-weight: 700;
+    color: #f5f5f5;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  .lightbox-category {
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: #dc2626;
+    margin-bottom: 12px;
+  }
+
+  .lightbox-description {
+    color: #a3a3a3;
+    margin-top: 12px;
+    max-width: 560px;
+    line-height: 1.6;
+  }
+
+  .lightbox-nav {
+    display: flex;
+    gap: 12px;
+  }
+
+  .lightbox-nav button {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.05);
+    color: #f5f5f5;
+    cursor: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+  }
+
+  .lightbox-nav button:hover {
+    background: #dc2626;
+    border-color: #dc2626;
+  }
+
+  .lightbox-close {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.05);
+    color: #f5f5f5;
+    cursor: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+  }
+
+  .lightbox-close:hover {
+    background: #dc2626;
+    border-color: #dc2626;
+    transform: rotate(90deg);
+  }
+
+  .lightbox-counter {
+    position: absolute;
+    top: 32px;
+    left: 32px;
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: #737373;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Nav active link ── */
+  .nav-link.active {
+    color: var(--text-primary) !important;
+  }
+
+  .nav-link.active::after {
+    width: 100% !important;
+    background: #dc2626;
+  }
+
+  /* ── GLSL Liquid Distortion hover ── */
+  .grid-item-webgl {
+    position: relative;
+    overflow: hidden;
+    border-radius: 4px;
+  }
+
+  .grid-item-webgl canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .grid-item-webgl .grid-fallback {
+    width: 100%;
+    height: 100%;
   }
 
   /* ── Custom Cursor ── */
@@ -318,12 +736,538 @@ tailwind.config = {
 
   /* Scrollbar */
   ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: #f4f3ef; }
-  ::-webkit-scrollbar-thumb { background: #c4c3bf; border-radius: 3px; }
+  ::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+  ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
   ::-webkit-scrollbar-thumb:hover { background: #dc2626; }
+
+  /* ── Touch device additions ── */
+  @media (hover: none) and (pointer: coarse) {
+    #themeToggle, #scrollProgressRing { cursor: pointer; }
+    #cursorTrail, #burstCanvas { display: none; }
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* ════════════════════════════════════════════════════════════════
+     FEATURE 11: PINNED HORIZONTAL-SCROLL GALLERY
+     ════════════════════════════════════════════════════════════════ */
+  .horizontal-section {
+    position: relative;
+    height: 400vh; /* tall so we have scroll runway */
+  }
+  .horizontal-pin {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+  }
+  .horizontal-track {
+    display: flex;
+    gap: 2rem;
+    padding: 0 6rem;
+    will-change: transform;
+    transition: transform 0.05s linear;
+  }
+  .horizontal-panel {
+    flex: 0 0 auto;
+    width: 70vw;
+    max-width: 720px;
+    aspect-ratio: 4 / 3;
+    position: relative;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    border-radius: 2px;
+    background: var(--bg-secondary);
+  }
+  .horizontal-panel .panel-meta {
+    position: absolute;
+    bottom: 1.5rem;
+    left: 1.5rem;
+    right: 1.5rem;
+    z-index: 2;
+    color: var(--overlay-text);
+  }
+  .horizontal-panel .panel-num {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    z-index: 2;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    color: var(--overlay-text);
+    opacity: 0.7;
+  }
+  .horizontal-progress-track {
+    position: absolute;
+    bottom: 3rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 12rem;
+    height: 1px;
+    background: var(--border-strong);
+    overflow: hidden;
+    z-index: 3;
+  }
+  .horizontal-progress-fill {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.1s linear;
+  }
+  .horizontal-heading {
+    position: absolute;
+    top: 6rem;
+    left: 6rem;
+    z-index: 3;
+    pointer-events: none;
+  }
+  @media (max-width: 768px) {
+    .horizontal-panel { width: 80vw; }
+    .horizontal-track { padding: 0 1.5rem; gap: 1rem; }
+    .horizontal-heading { top: 2rem; left: 1.5rem; }
+  }
+
+  /* ════════════════════════════════════════════════════════════════
+     FEATURE 12: AUDIO TOGGLE BUTTON
+     ════════════════════════════════════════════════════════════════ */
+  #audioToggle {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 1.5rem;
+    z-index: 999;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--border-strong);
+    background: var(--bg-overlay);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: none;
+    transition: all 0.3s ease;
+    opacity: 0;
+    transform: translateY(20px);
+    pointer-events: none;
+  }
+  #audioToggle.ready { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  #audioToggle:hover { border-color: var(--accent); color: var(--accent); }
+  #audioToggle.playing { border-color: var(--accent); color: var(--accent); }
+  #audioToggle .audio-wave {
+    display: flex;
+    gap: 2px;
+    align-items: center;
+    height: 14px;
+  }
+  #audioToggle .audio-wave span {
+    width: 2px;
+    background: currentColor;
+    height: 4px;
+    border-radius: 1px;
+    transition: height 0.2s ease;
+  }
+  #audioToggle.playing .audio-wave span {
+    animation: audioWave 1.2s ease-in-out infinite;
+  }
+  #audioToggle.playing .audio-wave span:nth-child(1) { animation-delay: 0s; }
+  #audioToggle.playing .audio-wave span:nth-child(2) { animation-delay: 0.15s; }
+  #audioToggle.playing .audio-wave span:nth-child(3) { animation-delay: 0.3s; }
+  #audioToggle.playing .audio-wave span:nth-child(4) { animation-delay: 0.45s; }
+  @keyframes audioWave {
+    0%, 100% { height: 4px; }
+    50% { height: 14px; }
+  }
+
+  /* ════════════════════════════════════════════════════════════════
+     FEATURE 13: KONAMI CODE OVERLAY
+     ════════════════════════════════════════════════════════════════ */
+  #konamiOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    overflow: hidden;
+  }
+  #konamiOverlay.active { opacity: 1; pointer-events: auto; }
+  #konamiOverlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(220,38,38,0.15), rgba(10,10,10,0.85));
+    backdrop-filter: blur(2px);
+  }
+  #konamiMessage {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    color: #fff;
+    text-align: center;
+    z-index: 2;
+    transition: transform 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.4);
+    opacity: 0;
+  }
+  #konamiOverlay.active #konamiMessage {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  #konamiMessage .km-eyebrow {
+    font-size: 0.7rem;
+    letter-spacing: 0.4em;
+    color: #dc2626;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+  }
+  #konamiMessage .km-title {
+    font-size: clamp(2rem, 6vw, 4.5rem);
+    font-weight: 200;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  #konamiMessage .km-sub {
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    letter-spacing: 0.2em;
+    color: #a3a3a3;
+    text-transform: uppercase;
+  }
+  .konami-particle {
+    position: absolute;
+    pointer-events: none;
+    will-change: transform, opacity;
+  }
+
+  /* ════════════════════════════════════════════════════════════════
+     FEATURE 14: CURSOR-REACTIVE TEXT DISTORTION
+     ════════════════════════════════════════════════════════════════ */
+  [data-distort] .distort-char {
+    display: inline-block;
+    transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2), color 0.4s ease;
+    will-change: transform;
+  }
+  [data-distort] .distort-char.distort-active {
+    color: var(--accent);
+  }
+
+  /* ════════════════════════════════════════════════════════════════
+     FEATURE 15: LIVE-DRAWING SVG MANDALA
+     ════════════════════════════════════════════════════════════════ */
+  .mandala-bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .mandala-bg svg {
+    width: 100%;
+    height: 100%;
+    max-width: 800px;
+    max-height: 800px;
+  }
+  .mandala-stroke {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 0.5;
+    opacity: 0.35;
+    stroke-dasharray: var(--len, 1000);
+    stroke-dashoffset: var(--len, 1000);
+    transition: stroke-dashoffset 2.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .mandala-bg.drawn .mandala-stroke {
+    stroke-dashoffset: 0;
+  }
+
+  /* ════════════════════════════════════════════════════════════════
+     FEATURE 16: 3D PERSPECTIVE TILT CARD
+     ════════════════════════════════════════════════════════════════ */
+  .tilt-3d-wrap {
+    perspective: 1200px;
+    transform-style: preserve-3d;
+  }
+  .tilt-3d-card {
+    transform-style: preserve-3d;
+    transition: transform 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+    will-change: transform;
+    position: relative;
+  }
+  .tilt-3d-card .tilt-layer {
+    transform-style: preserve-3d;
+    transition: transform 0.2s ease;
+  }
+  .tilt-3d-card .tilt-layer-1 { transform: translateZ(30px); }
+  .tilt-3d-card .tilt-layer-2 { transform: translateZ(60px); }
+  .tilt-3d-card .tilt-shine {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(255,255,255,0.18), transparent 50%);
+    mix-blend-mode: overlay;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 5;
+  }
+  .tilt-3d-card:hover .tilt-shine { opacity: 1; }
+
+  /* ════════════════════════════════════════════════════════════════
+     FEATURE 17: WORD-BY-WORD REVEAL
+     ════════════════════════════════════════════════════════════════ */
+  .word-reveal .word {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+    margin-right: 0.25em;
+  }
+  .word-reveal.revealed .word {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ════════════════════════════════════════════════════════════════
+     FEATURE 18: FOOTER LIVE CLOCK
+     ════════════════════════════════════════════════════════════════ */
+  .footer-clock {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.1em;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+  }
+  .footer-greeting {
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.25rem;
+  }
+
+  /* ════════════════════════════════════════════════════════════════
+     FEATURE 19: COMMAND PALETTE
+     ════════════════════════════════════════════════════════════════ */
+  #commandPalette {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(10,10,10,0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 12vh;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  #commandPalette.open { opacity: 1; pointer-events: auto; }
+  .cmdk-box {
+    width: min(640px, 92vw);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.25);
+    overflow: hidden;
+    transform: translateY(-12px) scale(0.98);
+    transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+  }
+  #commandPalette.open .cmdk-box { transform: translateY(0) scale(1); }
+  .cmdk-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .cmdk-input-wrap svg { color: var(--text-faint); flex-shrink: 0; }
+  .cmdk-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-family: inherit;
+  }
+  .cmdk-input::placeholder { color: var(--text-faint); }
+  .cmdk-kbd {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.45rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    color: var(--text-faint);
+    letter-spacing: 0.05em;
+  }
+  .cmdk-list {
+    max-height: 360px;
+    overflow-y: auto;
+    padding: 0.5rem;
+  }
+  .cmdk-group-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    padding: 0.75rem 0.75rem 0.4rem;
+  }
+  .cmdk-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.7rem 0.75rem;
+    border-radius: 4px;
+    cursor: none;
+    transition: background 0.15s ease;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+  }
+  .cmdk-item.active {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+  }
+  .cmdk-item-icon {
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--text-muted);
+  }
+  .cmdk-item.active .cmdk-item-icon { border-color: var(--accent); color: var(--accent); }
+  .cmdk-item-meta {
+    margin-left: auto;
+    font-size: 0.65rem;
+    color: var(--text-faint);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .cmdk-footer {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 0.65rem 1rem;
+    border-top: 1px solid var(--border-color);
+    font-size: 0.65rem;
+    color: var(--text-faint);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .cmdk-footer span { display: flex; align-items: center; gap: 0.35rem; }
+  .cmdk-footer kbd {
+    font-family: inherit;
+    padding: 0.1rem 0.35rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 3px;
+    font-size: 0.6rem;
+  }
+  .cmdk-trigger {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 5rem;
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 0.85rem;
+    border: 1px solid var(--border-strong);
+    background: var(--bg-overlay);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    border-radius: 6px;
+    cursor: none;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+  }
+  .cmdk-trigger.ready { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  .cmdk-trigger:hover { border-color: var(--accent); color: var(--accent); }
+  .cmdk-trigger kbd {
+    font-family: inherit;
+    padding: 0.1rem 0.35rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 3px;
+    font-size: 0.6rem;
+  }
+  @media (max-width: 640px) {
+    .cmdk-trigger { display: none; }
+  }
+
+  /* ════════════════════════════════════════════════════════════════
+     FEATURE 20: SCROLL-VELOCITY MOTION BLUR
+     ════════════════════════════════════════════════════════════════ */
+  [data-scroll-blur] {
+    transition: filter 0.3s ease, transform 0.3s ease;
+    will-change: filter, transform;
+  }
+  [data-scroll-blur].velocity-active {
+    filter: blur(var(--blur-px, 2px));
+    transform: scaleY(0.985);
+  }
+
+  /* ════════════════════════════════════════════════════════════════
+     MOBILE MENU — full-screen overlay, fadeIn stagger for items
+     ════════════════════════════════════════════════════════════════ */
+  @keyframes mobileMenuFadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Hide floating UI buttons on small screens to reduce clutter */
+  @media (max-width: 640px) {
+    #audioToggle { display: none !important; }
+    #cmdkTrigger { display: none !important; }
+    /* Make scroll progress ring smaller and less intrusive on mobile */
+    #scrollProgressRing {
+      width: 36px !important;
+      height: 36px !important;
+      bottom: 1rem !important;
+      right: 1rem !important;
+    }
+    #scrollProgressRing svg { width: 36px; height: 36px; }
+    #scrollProgressRing .ring-text { font-size: 8px !important; }
+  }
 </style>
 </head>
 <body>
+
+<!-- Preloader -->
+<div id="preloader">
+  <div class="preloader-logo">
+    <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="40,8 72,28 72,52 40,72 8,52 8,28" fill="none" stroke="#dc2626" stroke-width="1.5"/>
+      <polygon points="40,20 60,32 60,48 40,60 20,48 20,32" fill="none" stroke="#dc2626" stroke-width="1" opacity="0.6"/>
+      <rect x="35" y="35" width="10" height="10" fill="#dc2626" opacity="0.8"/>
+    </svg>
+  </div>
+  <div class="preloader-text">The Obsidian Archive</div>
+  <div class="preloader-progress">
+    <div class="preloader-progress-fill" id="preloaderFill"></div>
+  </div>
+  <div class="preloader-percentage" id="preloaderPercent">0%</div>
+</div>
 
 <!-- Noise Overlay -->
 <div class="noise-overlay"></div>
@@ -332,13 +1276,528 @@ tailwind.config = {
 <div class="cursor-dot" id="cursorDot"></div>
 <div class="cursor-ring" id="cursorRing"></div>
 
-<!-- Hero Background Canvas -->
+<!-- Cursor Trail -->
+<canvas id="cursorTrail"></canvas>
+
+<!-- Particle Burst Canvas -->
+<canvas id="burstCanvas"></canvas>
+
+<!-- Scroll Progress Bar -->
+<div id="scrollProgressBar"></div>
+
+<!-- Scroll Progress Ring -->
+<div id="scrollProgressRing">
+  <svg viewBox="0 0 56 56">
+    <circle class="ring-bg" cx="28" cy="28" r="24"/>
+    <circle class="ring-fg" id="ringFg" cx="28" cy="28" r="24" stroke-dasharray="150.8" stroke-dashoffset="150.8"/>
+  </svg>
+  <div class="ring-text" id="ringText">0%</div>
+</div>
+
+<!-- Theme Toggle -->
+<button id="themeToggle" aria-label="Toggle theme">
+  <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <circle cx="12" cy="12" r="4"/>
+    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+  </svg>
+  <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+  </svg>
+</button>
+
+<!-- Lightbox -->
+<div id="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer">
+  <div class="lightbox-counter" id="lightboxCounter">01 / 06</div>
+  <button class="lightbox-close" id="lightboxClose" aria-label="Close lightbox">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+  </button>
+  <div class="lightbox-content" id="lightboxContent">
+    <div class="lightbox-image" id="lightboxImage"></div>
+    <div class="lightbox-meta">
+      <div>
+        <div class="lightbox-category" id="lightboxCategory"></div>
+        <div class="lightbox-title" id="lightboxTitle"></div>
+        <div class="lightbox-description" id="lightboxDescription"></div>
+      </div>
+      <div class="lightbox-nav">
+        <button id="lightboxPrev" aria-label="Previous"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <button id="lightboxNext" aria-label="Next"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Hero Background Canvas (2D particles) -->
 <canvas id="heroCanvas"></canvas>
+
+<!-- Hero 3D Crystal Canvas -->
+<canvas id="heroCrystal"></canvas>
+
+<!-- FEATURE 12: Audio Toggle -->
+<button id="audioToggle" aria-label="Toggle ambient soundscape" title="Toggle ambient soundscape">
+  <div class="audio-wave">
+    <span></span><span></span><span></span><span></span>
+  </div>
+</button>
+
+<!-- FEATURE 19: Command Palette Trigger -->
+<button id="cmdkTrigger" class="cmdk-trigger" aria-label="Open command palette">
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+  <span>Search</span>
+  <kbd>⌘K</kbd>
+</button>
+
+<!-- FEATURE 19: Command Palette Overlay -->
+<div id="commandPalette" role="dialog" aria-modal="true" aria-label="Command palette">
+  <div class="cmdk-box">
+    <div class="cmdk-input-wrap">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input class="cmdk-input" id="cmdkInput" type="text" placeholder="Search sections, sculptures, actions…" autocomplete="off" spellcheck="false" />
+      <span class="cmdk-kbd">ESC</span>
+    </div>
+    <div class="cmdk-list" id="cmdkList" role="listbox"></div>
+    <div class="cmdk-footer">
+      <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
+      <span><kbd>↵</kbd> Select</span>
+      <span><kbd>ESC</kbd> Close</span>
+    </div>
+  </div>
+</div>
+
+<!-- FEATURE 13: Konami Code Overlay -->
+<div id="konamiOverlay">
+  <div id="konamiMessage">
+    <div class="km-eyebrow">Secret Unlocked</div>
+    <div class="km-title">You found the void.</div>
+    <div class="km-sub">Obsidian Archive · Hidden Layer</div>
+  </div>
+</div>
 
 <!-- React Root -->
 <div id="root"></div>
 
 <script>
+// ═══════════════════════════════════════════════════════════════════════
+// FEATURE 7 (PRE-REACT): Apply saved theme IMMEDIATELY to prevent FOUC
+// ═══════════════════════════════════════════════════════════════════════
+(function applyEarlyTheme() {
+  try {
+    const saved = localStorage.getItem('obsidian-theme');
+    if (saved === 'dark') {
+      document.body.classList.add('theme-dark');
+    }
+  } catch (e) { /* localStorage unavailable */ }
+})();
+
+// ═══════════════════════════════════════════════════════════════════════
+// FEATURE 3: PRELOADER with live percentage
+// ═══════════════════════════════════════════════════════════════════════
+(function initPreloader() {
+  const preloader = document.getElementById('preloader');
+  const fill = document.getElementById('preloaderFill');
+  const percent = document.getElementById('preloaderPercent');
+  if (!preloader || !fill || !percent) return;
+
+  let progress = 0;
+  let raf;
+  function tick() {
+    // simulate asset load with easing toward 100
+    const remaining = 100 - progress;
+    progress += Math.max(0.5, remaining * 0.08);
+    if (progress > 99.5) progress = 100;
+    fill.style.width = progress + '%';
+    percent.textContent = Math.floor(progress) + '%';
+    if (progress < 100) {
+      raf = requestAnimationFrame(tick);
+    } else {
+      // Wait for window load, then hide
+      const hide = () => {
+        setTimeout(() => {
+          preloader.classList.add('hidden');
+          setTimeout(() => preloader.remove(), 900);
+        }, 300);
+      };
+      if (document.readyState === 'complete') hide();
+      else window.addEventListener('load', hide);
+    }
+  }
+  // Start after a tiny delay so initial paint happens
+  setTimeout(() => { raf = requestAnimationFrame(tick); }, 50);
+
+  // Failsafe: hide after 6 seconds no matter what
+  setTimeout(() => {
+    if (!preloader.classList.contains('hidden')) {
+      preloader.classList.add('hidden');
+      setTimeout(() => preloader.remove(), 900);
+    }
+  }, 6000);
+})();
+
+// ═══════════════════════════════════════════════════════════════════════
+// FEATURE 7: THEME TOGGLE
+// ═══════════════════════════════════════════════════════════════════════
+(function initThemeToggle() {
+  const toggle = document.getElementById('themeToggle');
+  if (!toggle) return;
+  toggle.addEventListener('click', () => {
+    const isDark = document.body.classList.toggle('theme-dark');
+    try { localStorage.setItem('obsidian-theme', isDark ? 'dark' : 'light'); } catch (e) {}
+  });
+})();
+
+// ═══════════════════════════════════════════════════════════════════════
+// FEATURE 10: SCROLL PROGRESS (top bar + side ring)
+// ═══════════════════════════════════════════════════════════════════════
+(function initScrollProgress() {
+  const bar = document.getElementById('scrollProgressBar');
+  const ring = document.getElementById('ringFg');
+  const ringText = document.getElementById('ringText');
+  if (!bar || !ring || !ringText) return;
+
+  const CIRCUMFERENCE = 2 * Math.PI * 24; // r=24
+  ring.setAttribute('stroke-dasharray', CIRCUMFERENCE);
+
+  function update() {
+    const scrollTop = window.scrollY;
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    const pct = docHeight > 0 ? Math.min(1, scrollTop / docHeight) : 0;
+    bar.style.width = (pct * 100) + '%';
+    ring.setAttribute('stroke-dashoffset', CIRCUMFERENCE * (1 - pct));
+    ringText.textContent = Math.floor(pct * 100) + '%';
+  }
+  window.addEventListener('scroll', update, { passive: true });
+  window.addEventListener('resize', update);
+  update();
+})();
+
+// ═══════════════════════════════════════════════════════════════════════
+// FEATURE 9: CURSOR ECHO MOTION-BLUR TRAIL
+// ═══════════════════════════════════════════════════════════════════════
+(function initCursorTrail() {
+  const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  if (isTouch) return;
+
+  const canvas = document.getElementById('cursorTrail');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let w, h, dpr;
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    w = window.innerWidth;
+    h = window.innerHeight;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const trail = [];
+  const MAX_TRAIL = 18;
+
+  let mx = -100, my = -100;
+  document.addEventListener('mousemove', (e) => {
+    mx = e.clientX; my = e.clientY;
+    trail.push({ x: mx, y: my, life: 1 });
+    if (trail.length > MAX_TRAIL) trail.shift();
+  });
+
+  function animate() {
+    ctx.clearRect(0, 0, w, h);
+    // Fade existing trail
+    for (let i = 0; i < trail.length; i++) {
+      const p = trail[i];
+      p.life *= 0.88;
+      const radius = Math.max(0.5, p.life * 6);
+      const alpha = p.life * 0.18;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(220, 38, 38, ${alpha})`;
+      ctx.fill();
+    }
+    // Drop dead particles
+    for (let i = trail.length - 1; i >= 0; i--) {
+      if (trail[i].life < 0.02) trail.splice(i, 1);
+    }
+    requestAnimationFrame(animate);
+  }
+  animate();
+})();
+
+// ═══════════════════════════════════════════════════════════════════════
+// FEATURE 8: PARTICLE BURST on click (global, looks for [data-burst] or .magnetic-btn)
+// ═══════════════════════════════════════════════════════════════════════
+(function initBurstCanvas() {
+  const canvas = document.getElementById('burstCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let w, h, dpr;
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    w = window.innerWidth;
+    h = window.innerHeight;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const particles = [];
+  const GRAVITY = 0.12;
+  const FRICTION = 0.97;
+
+  class BurstParticle {
+    constructor(x, y) {
+      this.x = x; this.y = y;
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 2 + Math.random() * 6;
+      this.vx = Math.cos(angle) * speed;
+      this.vy = Math.sin(angle) * speed - 1; // slight upward bias
+      this.life = 1;
+      this.decay = 0.012 + Math.random() * 0.015;
+      this.size = 1 + Math.random() * 2.5;
+      // Mostly crimson, some white sparks
+      this.isWhite = Math.random() < 0.15;
+    }
+    update() {
+      this.x += this.vx;
+      this.y += this.vy;
+      this.vx *= FRICTION;
+      this.vy *= FRICTION;
+      this.vy += GRAVITY;
+      this.life -= this.decay;
+    }
+    draw() {
+      if (this.life <= 0) return;
+      const r = Math.max(0.3, this.size * this.life);
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = this.isWhite
+        ? `rgba(255, 245, 245, ${this.life * 0.9})`
+        : `rgba(220, 38, 38, ${this.life * 0.85})`;
+      ctx.fill();
+    }
+  }
+
+  function spawnBurst(x, y, count = 32) {
+    for (let i = 0; i < count; i++) {
+      particles.push(new BurstParticle(x, y));
+    }
+  }
+
+  function animate() {
+    ctx.clearRect(0, 0, w, h);
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.update();
+      p.draw();
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+    requestAnimationFrame(animate);
+  }
+  animate();
+
+  // Expose for React to call
+  window.__spawnBurst = spawnBurst;
+
+  // Global click listener for [data-burst] elements
+  document.addEventListener('click', (e) => {
+    const target = e.target.closest('[data-burst], .magnetic-btn');
+    if (target) {
+      spawnBurst(e.clientX, e.clientY, 28);
+    }
+  });
+})();
+
+// ═══════════════════════════════════════════════════════════════════════
+// FEATURE 1: THREE.JS 3D CRYSTAL in hero
+// ═══════════════════════════════════════════════════════════════════════
+(function initHeroCrystal() {
+  if (typeof THREE === 'undefined') return;
+  const canvas = document.getElementById('heroCrystal');
+  if (!canvas) return;
+
+  let renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+  } catch (e) {
+    console.warn('WebGL unavailable, crystal disabled');
+    return;
+  }
+
+  let w = window.innerWidth;
+  let h = window.innerHeight;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(w, h);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+  camera.position.set(0, 0, 8);
+
+  // Crystal geometry — icosahedron with wireframe overlay
+  const geo = new THREE.IcosahedronGeometry(2.4, 0);
+  const wireGeo = new THREE.IcosahedronGeometry(2.42, 0);
+
+  // Custom shader material for translucent faceted look
+  const mat = new THREE.ShaderMaterial({
+    transparent: true,
+    side: THREE.DoubleSide,
+    uniforms: {
+      uTime: { value: 0 },
+      uColor: { value: new THREE.Color(0xdc2626) },
+      uOpacity: { value: 0.18 }
+    },
+    vertexShader: `
+      varying vec3 vNormal;
+      varying vec3 vPos;
+      void main() {
+        vNormal = normalize(normalMatrix * normal);
+        vPos = position;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float uTime;
+      uniform vec3 uColor;
+      uniform float uOpacity;
+      varying vec3 vNormal;
+      varying vec3 vPos;
+      void main() {
+        vec3 lightDir = normalize(vec3(0.5, 1.0, 0.8));
+        float diffuse = max(dot(vNormal, lightDir), 0.0);
+        float rim = 1.0 - max(dot(vNormal, vec3(0.0, 0.0, 1.0)), 0.0);
+        rim = pow(rim, 1.5);
+        float pulse = 0.5 + 0.5 * sin(uTime * 0.8 + length(vPos) * 1.5);
+        vec3 col = uColor * (0.3 + diffuse * 0.7) + vec3(1.0) * rim * 0.4;
+        float alpha = uOpacity * (0.5 + rim * 0.8 + pulse * 0.2);
+        gl_FragColor = vec4(col, alpha);
+      }
+    `
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  scene.add(mesh);
+
+  const wireMat = new THREE.LineBasicMaterial({
+    color: 0xdc2626,
+    transparent: true,
+    opacity: 0.35
+  });
+  const wire = new THREE.LineSegments(new THREE.WireframeGeometry(wireGeo), wireMat);
+  scene.add(wire);
+
+  // Inner glowing core
+  const coreGeo = new THREE.IcosahedronGeometry(0.6, 0);
+  const coreMat = new THREE.MeshBasicMaterial({
+    color: 0xdc2626,
+    transparent: true,
+    opacity: 0.4,
+    wireframe: true
+  });
+  const core = new THREE.Mesh(coreGeo, coreMat);
+  scene.add(core);
+
+  // Mouse interaction
+  let targetRotX = 0, targetRotY = 0;
+  let rotX = 0, rotY = 0;
+  let isDragging = false;
+  let dragStartX = 0, dragStartY = 0;
+  let dragRotX = 0, dragRotY = 0;
+
+  canvas.addEventListener('mousemove', (e) => {
+    if (isDragging) {
+      targetRotY = dragRotY + (e.clientX - dragStartX) * 0.01;
+      targetRotX = dragRotX + (e.clientY - dragStartY) * 0.01;
+    } else {
+      // Subtle parallax based on mouse position
+      targetRotY = (e.clientX / w - 0.5) * 0.6;
+      targetRotX = (e.clientY / h - 0.5) * 0.4;
+    }
+  });
+
+  canvas.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    dragRotX = targetRotX;
+    dragRotY = targetRotY;
+    canvas.style.cursor = 'grabbing';
+  });
+  window.addEventListener('mouseup', () => {
+    isDragging = false;
+    canvas.style.cursor = '';
+  });
+
+  // Touch support
+  canvas.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+      isDragging = true;
+      dragStartX = e.touches[0].clientX;
+      dragStartY = e.touches[0].clientY;
+      dragRotX = targetRotX;
+      dragRotY = targetRotY;
+    }
+  });
+  canvas.addEventListener('touchmove', (e) => {
+    if (isDragging && e.touches.length === 1) {
+      targetRotY = dragRotY + (e.touches[0].clientX - dragStartX) * 0.01;
+      targetRotX = dragRotX + (e.touches[0].clientY - dragStartY) * 0.01;
+    }
+  });
+  window.addEventListener('touchend', () => { isDragging = false; });
+
+  function resize() {
+    w = window.innerWidth;
+    h = window.innerHeight;
+    renderer.setSize(w, h);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', resize);
+
+  // Pause when hero is offscreen for performance
+  let heroVisible = true;
+  const heroEl = document.getElementById('hero');
+  if (heroEl && 'IntersectionObserver' in window) {
+    const heroObs = new IntersectionObserver((entries) => {
+      heroVisible = entries[0].isIntersecting;
+    }, { threshold: 0 });
+    heroObs.observe(heroEl);
+  }
+
+  const clock = new THREE.Clock();
+  function animate() {
+    requestAnimationFrame(animate);
+    if (!heroVisible) return;
+    const t = clock.getElapsedTime();
+    mat.uniforms.uTime.value = t;
+
+    // Smooth rotation
+    rotX += (targetRotX - rotX) * 0.06;
+    rotY += (targetRotY - rotY) * 0.06;
+
+    // Idle auto-rotation
+    const idleY = t * 0.15;
+    mesh.rotation.x = rotX;
+    mesh.rotation.y = rotY + idleY;
+    wire.rotation.x = rotX;
+    wire.rotation.y = rotY + idleY;
+    core.rotation.x = -rotX * 0.5;
+    core.rotation.y = -rotY * 0.5 - t * 0.3;
+    core.scale.setScalar(1 + Math.sin(t * 2) * 0.1);
+
+    renderer.render(scene, camera);
+  }
+  animate();
+})();
+
 // ═══════════════════════════════════════════════════════
 // HERO CANVAS — Abstract Floating Topology / Micro-Particles
 // Reacts to cursor movement, 60fps, low opacity
@@ -566,170 +2025,109 @@ tailwind.config = {
 const h = React.createElement;
 const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
-// ── Generative SVG Pattern Components (Light Mode Palettes) ──
-function PatternVortex(props) {
-  const { width, height, color } = props;
-  const lines = [];
-  const cx = width / 2, cy = height / 2;
-  for (let i = 0; i < 36; i++) {
-    const angle = (i * 10) * Math.PI / 180;
-    const r1 = 20, r2 = Math.min(width, height) * 0.45;
-    lines.push(h('line', {
-      key: i,
-      x1: cx + Math.cos(angle) * r1, y1: cy + Math.sin(angle) * r1,
-      x2: cx + Math.cos(angle + 0.5) * r2, y2: cy + Math.sin(angle + 0.5) * r2,
-      stroke: color, strokeWidth: 0.8, opacity: 0.2 + (i / 36) * 0.35
-    }));
-  }
-  return h('svg', { width, height, viewBox: `0 0 ${width} ${height}` },
-    h('rect', { width, height, fill: '#e8e7e3' }),
-    ...lines,
-    h('circle', { cx, cy, r: 18, fill: 'none', stroke: color, strokeWidth: 1.5, opacity: 0.5 }),
-    h('circle', { cx, cy, r: 8, fill: color, opacity: 0.15 })
-  );
-}
+// ── Generative SVG Pattern string builders (for inline use + WebGL textures + lightbox) ──
+function buildPatternSVG(type, w, h, color) {
+  const fill = 'var(--pattern-fill, #e8e7e3)';
+  let inner = '';
+  const cx = w/2, cy = h/2;
 
-function PatternGrid(props) {
-  const { width, height, color } = props;
-  const rects = [];
-  const cols = 12, rows = 12;
-  const cw = width / cols, ch = height / rows;
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const dist = Math.sqrt(Math.pow(c - cols/2, 2) + Math.pow(r - rows/2, 2));
-      const opacity = Math.max(0.02, 0.3 - dist * 0.035);
-      if (Math.random() > 0.4) {
-        rects.push(h('rect', {
-          key: `${r}-${c}`, x: c * cw + 2, y: r * ch + 2,
-          width: cw - 4, height: ch - 4,
-          fill: color, opacity, rx: 1
-        }));
-      }
+  if (type === 'vortex') {
+    for (let i = 0; i < 36; i++) {
+      const a = (i*10)*Math.PI/180;
+      const r1 = 20, r2 = Math.min(w,h)*0.45;
+      const op = (0.2 + (i/36)*0.35).toFixed(3);
+      inner += `<line x1="${cx+Math.cos(a)*r1}" y1="${cy+Math.sin(a)*r1}" x2="${cx+Math.cos(a+0.5)*r2}" y2="${cy+Math.sin(a+0.5)*r2}" stroke="${color}" stroke-width="0.8" opacity="${op}"/>`;
     }
-  }
-  return h('svg', { width, height, viewBox: `0 0 ${width} ${height}` },
-    h('rect', { width, height, fill: '#e8e7e3' }),
-    ...rects
-  );
-}
-
-function PatternWaves(props) {
-  const { width, height, color } = props;
-  const paths = [];
-  for (let i = 0; i < 8; i++) {
-    let d = `M 0 ${height * 0.15 + i * (height * 0.1)}`;
-    for (let x = 0; x <= width; x += 10) {
-      const y = height * 0.15 + i * (height * 0.1) + Math.sin(x * 0.02 + i * 0.8) * (20 + i * 5);
-      d += ` L ${x} ${y}`;
-    }
-    paths.push(h('path', {
-      key: i, d, fill: 'none', stroke: color,
-      strokeWidth: 1.2, opacity: 0.08 + i * 0.04
-    }));
-  }
-  return h('svg', { width, height, viewBox: `0 0 ${width} ${height}` },
-    h('rect', { width, height, fill: '#e8e7e3' }),
-    ...paths
-  );
-}
-
-function PatternFacets(props) {
-  const { width, height, color } = props;
-  const polygons = [];
-  const points = [];
-  const numPts = 30;
-  for (let i = 0; i < numPts; i++) {
-    points.push({ x: Math.random() * width, y: Math.random() * height });
-  }
-  for (let i = 0; i < points.length; i++) {
-    for (let j = i + 1; j < points.length; j++) {
-      const dist = Math.hypot(points[i].x - points[j].x, points[i].y - points[j].y);
-      if (dist < 150) {
-        polygons.push(h('line', {
-          key: `${i}-${j}`,
-          x1: points[i].x, y1: points[i].y,
-          x2: points[j].x, y2: points[j].y,
-          stroke: color, strokeWidth: 0.5, opacity: 0.12
-        }));
-        for (let k = j + 1; k < points.length; k++) {
-          const d2 = Math.hypot(points[j].x - points[k].x, points[j].y - points[k].y);
-          const d3 = Math.hypot(points[i].x - points[k].x, points[i].y - points[k].y);
-          if (d2 < 150 && d3 < 150 && Math.random() > 0.6) {
-            polygons.push(h('polygon', {
-              key: `t-${i}-${j}-${k}`,
-              points: `${points[i].x},${points[i].y} ${points[j].x},${points[j].y} ${points[k].x},${points[k].y}`,
-              fill: color, opacity: 0.02 + Math.random() * 0.03,
-              stroke: color, strokeWidth: 0.4
-            }));
-          }
+    inner += `<circle cx="${cx}" cy="${cy}" r="18" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.5"/>`;
+    inner += `<circle cx="${cx}" cy="${cy}" r="8" fill="${color}" opacity="0.15"/>`;
+  } else if (type === 'grid') {
+    const cols = 12, rows = 12;
+    const cw = w/cols, ch = h/rows;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const dist = Math.sqrt(Math.pow(c-cols/2,2)+Math.pow(r-rows/2,2));
+        const op = Math.max(0.02, 0.3-dist*0.035).toFixed(3);
+        if (Math.random() > 0.4) {
+          inner += `<rect x="${c*cw+2}" y="${r*ch+2}" width="${cw-4}" height="${ch-4}" fill="${color}" opacity="${op}" rx="1"/>`;
         }
       }
     }
-  }
-  return h('svg', { width, height, viewBox: `0 0 ${width} ${height}` },
-    h('rect', { width, height, fill: '#e8e7e3' }),
-    ...polygons,
-    ...points.map((p, i) => h('circle', { key: `p-${i}`, cx: p.x, cy: p.y, r: 2.5, fill: color, opacity: 0.25 }))
-  );
-}
-
-function PatternRings(props) {
-  const { width, height, color } = props;
-  const cx = width / 2, cy = height / 2;
-  const circles = [];
-  for (let i = 0; i < 14; i++) {
-    circles.push(h('circle', {
-      key: i, cx, cy, r: 15 + i * 14,
-      fill: 'none', stroke: color,
-      strokeWidth: i % 3 === 0 ? 1.5 : 0.7,
-      opacity: 0.06 + (1 - i / 14) * 0.25,
-      strokeDasharray: i % 2 === 0 ? '4 6' : 'none'
-    }));
-  }
-  return h('svg', { width, height, viewBox: `0 0 ${width} ${height}` },
-    h('rect', { width, height, fill: '#e8e7e3' }),
-    ...circles,
-    h('circle', { cx, cy, r: 6, fill: color, opacity: 0.3 })
-  );
-}
-
-function PatternHex(props) {
-  const { width, height, color } = props;
-  const hexes = [];
-  const size = 30;
-  const hSpacing = size * 1.8;
-  const vSpacing = size * 1.55;
-  for (let row = 0; row < height / vSpacing + 1; row++) {
-    for (let col = 0; col < width / hSpacing + 1; col++) {
-      const x = col * hSpacing + (row % 2 ? hSpacing / 2 : 0);
-      const y = row * vSpacing;
-      const dist = Math.sqrt(Math.pow(x - width/2, 2) + Math.pow(y - height/2, 2));
-      const opacity = Math.max(0.015, 0.15 - dist * 0.0005);
-      let d = '';
-      for (let i = 0; i < 6; i++) {
-        const angle = (60 * i - 30) * Math.PI / 180;
-        const px = x + size * 0.5 * Math.cos(angle);
-        const py = y + size * 0.5 * Math.sin(angle);
-        d += (i === 0 ? 'M' : 'L') + ` ${px} ${py} `;
+  } else if (type === 'waves') {
+    for (let i = 0; i < 8; i++) {
+      let d = `M 0 ${h*0.15 + i*(h*0.1)}`;
+      for (let x = 0; x <= w; x += 10) {
+        const y = h*0.15 + i*(h*0.1) + Math.sin(x*0.02 + i*0.8)*(20+i*5);
+        d += ` L ${x} ${y}`;
       }
-      d += 'Z';
-      hexes.push(h('path', { key: `${row}-${col}`, d, fill: 'none', stroke: color, strokeWidth: 0.4, opacity }));
+      inner += `<path d="${d}" fill="none" stroke="${color}" stroke-width="1.2" opacity="${(0.08+i*0.04).toFixed(3)}"/>`;
+    }
+  } else if (type === 'facets') {
+    const pts = [];
+    for (let i = 0; i < 30; i++) pts.push({x: Math.random()*w, y: Math.random()*h});
+    for (let i = 0; i < pts.length; i++) {
+      for (let j = i+1; j < pts.length; j++) {
+        const d = Math.hypot(pts[i].x-pts[j].x, pts[i].y-pts[j].y);
+        if (d < 150) {
+          inner += `<line x1="${pts[i].x}" y1="${pts[i].y}" x2="${pts[j].x}" y2="${pts[j].y}" stroke="${color}" stroke-width="0.5" opacity="0.12"/>`;
+        }
+      }
+    }
+    for (const p of pts) inner += `<circle cx="${p.x}" cy="${p.y}" r="2.5" fill="${color}" opacity="0.25"/>`;
+  } else if (type === 'rings') {
+    for (let i = 0; i < 14; i++) {
+      const op = (0.06 + (1-i/14)*0.25).toFixed(3);
+      const dash = i%2===0 ? '4 6' : 'none';
+      const sw = i%3===0 ? 1.5 : 0.7;
+      inner += `<circle cx="${cx}" cy="${cy}" r="${15+i*14}" fill="none" stroke="${color}" stroke-width="${sw}" opacity="${op}" stroke-dasharray="${dash}"/>`;
+    }
+    inner += `<circle cx="${cx}" cy="${cy}" r="6" fill="${color}" opacity="0.3"/>`;
+  } else if (type === 'hex') {
+    const size = 30;
+    const hSp = size*1.8, vSp = size*1.55;
+    for (let row = 0; row < h/vSp+1; row++) {
+      for (let col = 0; col < w/hSp+1; col++) {
+        const x = col*hSp + (row%2 ? hSp/2 : 0);
+        const y = row*vSp;
+        const dist = Math.sqrt(Math.pow(x-w/2,2)+Math.pow(y-h/2,2));
+        const op = Math.max(0.015, 0.15-dist*0.0005).toFixed(3);
+        let d = '';
+        for (let i = 0; i < 6; i++) {
+          const a = (60*i-30)*Math.PI/180;
+          const px = x + size*0.5*Math.cos(a);
+          const py = y + size*0.5*Math.sin(a);
+          d += (i===0?'M':'L')+` ${px} ${py} `;
+        }
+        d += 'Z';
+        inner += `<path d="${d}" fill="none" stroke="${color}" stroke-width="0.4" opacity="${op}"/>`;
+      }
     }
   }
-  return h('svg', { width, height, viewBox: `0 0 ${width} ${height}` },
-    h('rect', { width, height, fill: '#e8e7e3' }),
-    ...hexes
-  );
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect width="${w}" height="${h}" fill="${fill}"/>${inner}</svg>`;
+}
+
+function patternSVGDataURI(type, w, h, color) {
+  const svg = buildPatternSVG(type, w, h, color);
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+
+// ── Generative SVG Pattern React Components (use SVG strings via dangerouslySetInnerHTML for theme reactivity) ──
+function PatternSVG(props) {
+  const { type, width, height, color } = props;
+  const svgString = buildPatternSVG(type, width, height, color);
+  return h('div', {
+    className: 'w-full h-full',
+    dangerouslySetInnerHTML: { __html: svgString }
+  });
 }
 
 // ── Portfolio Data ──
 const portfolioItems = [
-  { id: 1, title: 'Void Convergence', category: 'Generative Sculpture', description: 'Where gravity folds upon itself, new dimensions emerge from the silence between particles.', pattern: PatternVortex, color: '#dc2626', year: '2026', span: 'col-span-1 md:col-span-2' },
-  { id: 2, title: 'Fractured Meridian', category: 'Data Architecture', description: 'A lattice of fractured light \u2014 each shard a data point in an infinite regress of meaning.', pattern: PatternGrid, color: '#dc2626', year: '2025', span: 'col-span-1' },
-  { id: 3, title: 'Tidal Resonance', category: 'Algorithmic Flow', description: 'Rhythms computed by tides of entropy. The wave is the sculpture; the algorithm, the chisel.', pattern: PatternWaves, color: '#dc2626', year: '2025', span: 'col-span-1' },
-  { id: 4, title: 'Crystalline Topology', category: 'Geometric Abstraction', description: 'Facets of computed crystal \u2014 mathematics made mineral, logic given form.', pattern: PatternFacets, color: '#dc2626', year: '2024', span: 'col-span-1 md:col-span-2' },
-  { id: 5, title: 'Orbital Decay', category: 'Kinetic System', description: 'Concentric paths of dying stars, their orbits inscribed in light and memory.', pattern: PatternRings, color: '#dc2626', year: '2024', span: 'col-span-1' },
-  { id: 6, title: 'Hexagonal Drift', category: 'Structural Form', description: 'The honeycomb at the edge of chaos \u2014 order and disorder in perpetual negotiation.', pattern: PatternHex, color: '#dc2626', year: '2023', span: 'col-span-1' },
+  { id: 1, title: 'Void Convergence', category: 'Generative Sculpture', description: 'Where gravity folds upon itself, new dimensions emerge from the silence between particles.', patternType: 'vortex', color: '#dc2626', year: '2026', span: 'col-span-1 md:col-span-2' },
+  { id: 2, title: 'Fractured Meridian', category: 'Data Architecture', description: 'A lattice of fractured light — each shard a data point in an infinite regress of meaning.', patternType: 'grid', color: '#dc2626', year: '2025', span: 'col-span-1' },
+  { id: 3, title: 'Tidal Resonance', category: 'Algorithmic Flow', description: 'Rhythms computed by tides of entropy. The wave is the sculpture; the algorithm, the chisel.', patternType: 'waves', color: '#dc2626', year: '2025', span: 'col-span-1' },
+  { id: 4, title: 'Crystalline Topology', category: 'Geometric Abstraction', description: 'Facets of computed crystal — mathematics made mineral, logic given form.', patternType: 'facets', color: '#dc2626', year: '2024', span: 'col-span-1 md:col-span-2' },
+  { id: 5, title: 'Orbital Decay', category: 'Kinetic System', description: 'Concentric paths of dying stars, their orbits inscribed in light and memory.', patternType: 'rings', color: '#dc2626', year: '2024', span: 'col-span-1' },
+  { id: 6, title: 'Hexagonal Drift', category: 'Structural Form', description: 'The honeycomb at the edge of chaos — order and disorder in perpetual negotiation.', patternType: 'hex', color: '#dc2626', year: '2023', span: 'col-span-1' },
 ];
 
 // ── Navigation Component ──
@@ -743,19 +2141,56 @@ function Navigation() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Lock body scroll + stop Lenis when mobile menu is open
+  useEffect(() => {
+    if (menuOpen) {
+      document.body.style.overflow = 'hidden';
+      if (window.__lenis) window.__lenis.stop();
+    } else {
+      document.body.style.overflow = '';
+      if (window.__lenis) window.__lenis.start();
+    }
+    return () => {
+      document.body.style.overflow = '';
+      if (window.__lenis) window.__lenis.start();
+    };
+  }, [menuOpen]);
+
+  // Close menu on Escape
+  useEffect(() => {
+    function onKey(e) { if (e.key === 'Escape') setMenuOpen(false); }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Close menu if resized to desktop
+  useEffect(() => {
+    function onResize() { if (window.innerWidth >= 768) setMenuOpen(false); }
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
   const navItems = ['Archive', 'Philosophy', 'Process', 'Contact'];
 
   return h('nav', {
-    className: `fixed top-0 left-0 right-0 z-[1000] transition-all duration-500 ${scrolled ? 'bg-[#f4f3ef]/90 backdrop-blur-xl border-b border-neutral-300/50' : ''}`,
-    style: { mixBlendMode: 'normal' }
+    className: `fixed top-0 left-0 right-0 z-[1000] transition-all duration-500 ${scrolled ? 'backdrop-blur-xl border-b' : ''}`,
+    style: scrolled ? {
+      background: 'var(--bg-overlay)',
+      borderColor: 'var(--border-color)'
+    } : {}
   },
     h('div', { className: 'max-w-[1440px] mx-auto px-6 md:px-12 flex items-center justify-between h-20' },
       // Logo
-      h('a', { href: '#', className: 'nav-link interactive flex items-center gap-3', 'data-magnetic': 'true' },
+      h('a', {
+        href: '#',
+        className: 'nav-link interactive flex items-center gap-3',
+        'data-magnetic': 'true',
+        onClick: (e) => { e.preventDefault(); setMenuOpen(false); if (window.__lenis) window.__lenis.scrollTo(0); else window.scrollTo({ top: 0, behavior: 'smooth' }); }
+      },
         h('div', { className: 'w-8 h-8 border border-accent rounded-sm flex items-center justify-center' },
           h('div', { className: 'w-3 h-3 bg-accent rounded-[1px]' })
         ),
-        h('span', { className: 'text-sm font-semibold tracking-[0.2em] uppercase text-neutral-900' }, 'Obsidian')
+        h('span', { className: 'text-sm font-semibold tracking-[0.2em] uppercase', style: { color: 'var(--text-primary)' } }, 'Obsidian')
       ),
       // Desktop Nav
       h('div', { className: 'hidden md:flex items-center gap-10' },
@@ -763,31 +2198,91 @@ function Navigation() {
           h('a', {
             key: item,
             href: `#${item.toLowerCase()}`,
-            className: 'nav-link interactive text-xs font-medium tracking-[0.15em] uppercase text-neutral-500 hover:text-neutral-900 transition-colors duration-300',
-            'data-magnetic': 'true'
+            'data-nav-target': item.toLowerCase(),
+            className: 'nav-link interactive text-xs font-medium tracking-[0.15em] uppercase transition-colors duration-300',
+            'data-magnetic': 'true',
+            style: { color: 'var(--text-muted)' }
           }, item)
         )
       ),
-      // Mobile menu button
+      // Mobile menu button — sits ON TOP of the overlay (higher z-index)
       h('button', {
-        className: 'md:hidden interactive flex flex-col gap-1.5',
+        className: 'md:hidden interactive flex flex-col gap-1.5 relative z-[1100]',
         onClick: () => setMenuOpen(!menuOpen),
-        'aria-label': 'Toggle menu'
+        'aria-label': menuOpen ? 'Close menu' : 'Open menu',
+        'aria-expanded': menuOpen
       },
-        h('span', { className: `w-6 h-[1.5px] bg-neutral-900 transition-transform duration-300 ${menuOpen ? 'rotate-45 translate-y-[4.5px]' : ''}` }),
-        h('span', { className: `w-6 h-[1.5px] bg-neutral-900 transition-opacity duration-300 ${menuOpen ? 'opacity-0' : ''}` }),
+        h('span', { className: `w-6 h-[1.5px] transition-transform duration-300 ${menuOpen ? 'rotate-45 translate-y-[4.5px]' : ''}`, style: { background: 'var(--text-primary)' } }),
+        h('span', { className: `w-6 h-[1.5px] transition-opacity duration-300 ${menuOpen ? 'opacity-0' : ''}`, style: { background: 'var(--text-primary)' } }),
         h('span', { className: `w-4 h-[1.5px] bg-accent transition-all duration-300 ${menuOpen ? 'w-6 -rotate-45 -translate-y-[4.5px]' : ''}` })
       )
     ),
-    // Mobile Menu
-    menuOpen && h('div', { className: 'md:hidden fixed inset-0 top-20 bg-[#f4f3ef]/98 backdrop-blur-2xl z-[999] flex flex-col items-center justify-center gap-8' },
-      ...navItems.map(item =>
-        h('a', {
-          key: item,
-          href: `#${item.toLowerCase()}`,
-          className: 'interactive text-3xl font-light tracking-[0.15em] uppercase text-neutral-700 hover:text-accent transition-colors duration-300',
-          onClick: () => setMenuOpen(false)
-        }, item)
+    // Mobile Menu — FULL SCREEN overlay, covers entire viewport including top
+    menuOpen && h('div', {
+      className: 'md:hidden fixed inset-0 z-[1050] flex flex-col overflow-y-auto',
+      style: {
+        background: 'var(--bg-primary)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)'
+      }
+    },
+      // Top bar inside menu (mirrors nav height so layout doesn't jump)
+      h('div', { className: 'flex items-center justify-between h-20 px-6 flex-shrink-0' },
+        // Logo
+        h('div', { className: 'flex items-center gap-3' },
+          h('div', { className: 'w-8 h-8 border border-accent rounded-sm flex items-center justify-center' },
+            h('div', { className: 'w-3 h-3 bg-accent rounded-[1px]' })
+          ),
+          h('span', { className: 'text-sm font-semibold tracking-[0.2em] uppercase', style: { color: 'var(--text-primary)' } }, 'Obsidian')
+        ),
+        // Close button (replica of hamburger, for clarity)
+        h('button', {
+          className: 'flex flex-col gap-1.5 interactive',
+          onClick: () => setMenuOpen(false),
+          'aria-label': 'Close menu'
+        },
+          h('span', { className: 'w-6 h-[1.5px] rotate-45 translate-y-[4.5px]', style: { background: 'var(--text-primary)' } }),
+          h('span', { className: 'w-6 h-[1.5px] opacity-0', style: { background: 'var(--text-primary)' } }),
+          h('span', { className: 'w-6 h-[1.5px] -rotate-45 -translate-y-[4.5px] bg-accent' })
+        )
+      ),
+      // Nav items — left-aligned, larger gap, generous padding, no truncation
+      h('div', { className: 'flex-1 flex flex-col justify-center px-6 py-8 gap-2 min-w-0' },
+        h('p', { className: 'text-[10px] tracking-[0.3em] uppercase text-accent mb-6' }, 'Menu'),
+        ...navItems.map((item, i) =>
+          h('a', {
+            key: item,
+            href: `#${item.toLowerCase()}`,
+            'data-nav-target': item.toLowerCase(),
+            className: 'interactive text-3xl xs:text-4xl sm:text-5xl font-light tracking-[0.02em] sm:tracking-[0.05em] uppercase hover:text-accent transition-colors duration-300 py-3 border-b w-full overflow-hidden',
+            style: {
+              color: 'var(--text-primary)',
+              borderColor: 'var(--border-color)',
+              animation: `mobileMenuFadeIn 0.4s ease-out ${i * 60}ms both`
+            },
+            onClick: () => setMenuOpen(false)
+          }, item)
+        )
+      ),
+      // Footer inside mobile menu — social links
+      h('div', { className: 'flex-shrink-0 px-6 py-8 flex flex-col gap-4 items-start' },
+        h('div', { className: 'flex items-center gap-5 flex-wrap' },
+          ...[
+            { label: 'Instagram', href: 'https://www.instagram.com/' },
+            { label: 'Behance', href: 'https://www.behance.net/' },
+            { label: 'Twitter', href: 'https://twitter.com/' },
+          ].map(s =>
+            h('a', {
+              key: s.label,
+              href: s.href,
+              target: '_blank',
+              rel: 'noopener noreferrer',
+              className: 'interactive text-xs tracking-[0.15em] uppercase hover:text-accent transition-colors duration-300',
+              style: { color: 'var(--text-muted)' }
+            }, s.label)
+          )
+        ),
+        h('span', { className: 'text-[10px] tracking-[0.2em] uppercase', style: { color: 'var(--text-faint)' } }, 'Obsidian Archive')
       )
     )
   );
@@ -825,19 +2320,19 @@ function HeroSection() {
       ),
       // Main Title
       h('h1', {
-        className: `hero-title text-neutral-900 transition-all duration-1200 ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'}`,
-        style: { transitionDelay: '0.4s' }
+        className: `hero-title transition-all duration-1200 ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'}`,
+        style: { transitionDelay: '0.4s', color: 'var(--text-primary)' }
       }, 'The Obsidian'),
       h('h1', {
-        className: `hero-title text-neutral-400 transition-all duration-1200 ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'}`,
-        style: { transitionDelay: '0.55s' }
+        className: `hero-title transition-all duration-1200 ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'}`,
+        style: { transitionDelay: '0.55s', color: 'var(--text-faint)' }
       }, 'Archive'),
       // Line
       h('div', { className: 'hero-line my-10 max-w-lg' }),
       // Subtitle
       h('p', {
-        className: `body-large text-neutral-600 max-w-xl transition-all duration-1000 ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`,
-        style: { transitionDelay: '1s' }
+        className: `body-large max-w-xl transition-all duration-1000 ${loaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`,
+        style: { transitionDelay: '1s', color: 'var(--text-secondary)' }
       }, 'Sculpting digital realities from the raw material of code. Where data meets marble, algorithms breathe life into form, and every surface tells a story of computation.')
     ),
     // Scroll indicator
@@ -845,7 +2340,7 @@ function HeroSection() {
       className: `absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 transition-all duration-1000 z-[2] ${loaded ? 'opacity-100' : 'opacity-0'}`,
       style: { transitionDelay: '1.4s' }
     },
-      h('span', { className: 'text-[10px] tracking-[0.3em] uppercase text-neutral-400' }, 'Scroll'),
+      h('span', { className: 'text-[10px] tracking-[0.3em] uppercase', style: { color: 'var(--text-faint)' } }, 'Scroll'),
       h('div', { className: 'w-[1px] h-12 bg-gradient-to-b from-accent to-transparent' })
     )
   );
@@ -854,10 +2349,10 @@ function HeroSection() {
 // ── Marquee Section ──
 function MarqueeSection() {
   const words = 'OBSIDIAN \u00B7 ARCHIVE \u00B7 GENERATIVE \u00B7 SCULPTURE \u00B7 DIGITAL \u00B7 REALITY \u00B7 ALGORITHMIC \u00B7 FORM \u00B7 ';
-  return h('div', { className: 'py-8 border-y border-neutral-300/50 overflow-hidden reveal' },
+  return h('div', { className: 'py-8 border-y overflow-hidden reveal', style: { borderColor: 'var(--border-color)' } },
     h('div', { className: 'marquee-track whitespace-nowrap flex' },
-      h('span', { className: 'text-6xl md:text-8xl font-extralight tracking-[0.05em] text-neutral-300 select-none' }, words + words),
-      h('span', { className: 'text-6xl md:text-8xl font-extralight tracking-[0.05em] text-neutral-300 select-none' }, words + words)
+      h('span', { className: 'text-6xl md:text-8xl font-extralight tracking-[0.05em] select-none', style: { color: 'var(--text-ghost)' } }, words + words),
+      h('span', { className: 'text-6xl md:text-8xl font-extralight tracking-[0.05em] select-none', style: { color: 'var(--text-ghost)' } }, words + words)
     )
   );
 }
@@ -870,33 +2365,37 @@ function ArchiveSection() {
       h('div', { className: 'flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16 md:mb-24' },
         h('div', null,
           h('p', { className: 'reveal text-xs font-medium tracking-[0.3em] uppercase text-accent mb-4' }, 'Selected Works'),
-          h('h2', { className: 'reveal section-title text-neutral-900' }, 'The Archive')
+          h('h2', { className: 'reveal section-title', style: { color: 'var(--text-primary)' } }, 'The Archive')
         ),
-        h('p', { className: 'reveal body-large text-neutral-500 max-w-md' }, 'Each piece is a computed reality \u2014 algorithmic sculptures born from the intersection of mathematics, code, and aesthetic intent.')
+        h('p', { className: 'reveal body-large max-w-md', style: { color: 'var(--text-secondary)' } }, 'Each piece is a computed reality \u2014 algorithmic sculptures born from the intersection of mathematics, code, and aesthetic intent.')
       ),
       // Grid
       h('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 stagger-children' },
-        ...portfolioItems.map(item => {
-          const PatternComponent = item.pattern;
+        ...portfolioItems.map((item, idx) => {
           return h('div', {
             key: item.id,
             className: `reveal grid-item group relative ${item.span}`,
-            'data-magnetic': 'true'
+            'data-magnetic': 'true',
+            'data-lightbox-index': idx,
+            role: 'button',
+            tabIndex: 0,
+            'aria-label': `View ${item.title}`,
+            style: { cursor: 'none' }
           },
-            h('div', { className: 'pattern-container relative aspect-[4/3] bg-neutral-200 overflow-hidden' },
-              h('div', { className: 'grid-item-img w-full h-full' },
-                h(PatternComponent, { width: 600, height: 450, color: item.color })
+            h('div', { className: 'grid-item-webgl pattern-container relative aspect-[4/3] overflow-hidden', 'data-webgl-item': idx },
+              h('div', { className: 'grid-item-img grid-fallback w-full h-full' },
+                h(PatternSVG, { type: item.patternType, width: 600, height: 450, color: item.color })
               ),
-              h('div', { className: 'grid-item-overlay absolute inset-0 bg-gradient-to-t from-neutral-900/80 via-neutral-900/20 to-transparent flex flex-col justify-end p-6 md:p-8' },
+              h('div', { className: 'grid-item-overlay absolute inset-0 flex flex-col justify-end p-6 md:p-8', style: { background: 'linear-gradient(to top, var(--overlay-grad), var(--overlay-soft) 40%, transparent)' } },
                 h('p', { className: 'text-[10px] tracking-[0.2em] uppercase text-accent mb-2' }, item.category),
-                h('h3', { className: 'text-xl md:text-2xl font-semibold text-neutral-100 mb-2' }, item.title),
-                h('p', { className: 'text-sm text-neutral-300 leading-relaxed' }, item.description)
+                h('h3', { className: 'text-xl md:text-2xl font-semibold mb-2', style: { color: 'var(--overlay-text)' } }, item.title),
+                h('p', { className: 'text-sm leading-relaxed', style: { color: '#a3a3a3' } }, item.description)
               )
             ),
             // Bottom info bar
             h('div', { className: 'flex items-center justify-between mt-3 px-1' },
-              h('span', { className: 'text-xs text-neutral-400 tracking-wider uppercase' }, item.category),
-              h('span', { className: 'text-xs text-neutral-400' }, item.year)
+              h('span', { className: 'text-xs tracking-wider uppercase', style: { color: 'var(--text-faint)' } }, item.category),
+              h('span', { className: 'text-xs', style: { color: 'var(--text-faint)' } }, item.year)
             )
           );
         })
@@ -907,33 +2406,85 @@ function ArchiveSection() {
 
 // ── Philosophy Section ──
 function PhilosophySection() {
-  return h('section', { className: 'py-24 md:py-40 border-t border-neutral-300/50', id: 'philosophy' },
-    h('div', { className: 'max-w-[1440px] mx-auto px-6 md:px-12' },
+  const statsData = [
+    { number: 47, label: 'Sculptures Generated', sub: 'and counting', suffix: '' },
+    { number: 12, label: 'Algorithmic Systems', sub: 'unique processes', suffix: '' },
+    { number: 3.2, label: 'Vertices Computed', sub: 'across all works', suffix: 'M', decimals: 1 },
+    { number: Infinity, label: 'Possible Variations', sub: 'infinite generativity', suffix: '', isInfinity: true },
+  ];
+
+  // Build mandala SVG paths (concentric polygons + radial spokes) for FEATURE 15
+  const mandalaPaths = (() => {
+    const paths = [];
+    const cx = 200, cy = 200;
+    // Concentric hexagons
+    for (let r = 40; r <= 180; r += 28) {
+      const pts = [];
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI / 3) * i - Math.PI / 2;
+        pts.push(`${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`);
+      }
+      paths.push(`M${pts.join('L')}Z`);
+    }
+    // Radial spokes
+    for (let i = 0; i < 12; i++) {
+      const a = (Math.PI / 6) * i - Math.PI / 2;
+      paths.push(`M${cx},${cy} L${(cx + 190 * Math.cos(a)).toFixed(1)},${(cy + 190 * Math.sin(a)).toFixed(1)}`);
+    }
+    // Outer ring
+    paths.push(`M${cx - 190},${cy} a190,190 0 1,0 380,0 a190,190 0 1,0 -380,0`);
+    return paths;
+  })();
+
+  return h('section', { className: 'py-24 md:py-40 border-t relative overflow-hidden', id: 'philosophy', style: { borderColor: 'var(--border-color)' } },
+    // FEATURE 15: Live-drawing SVG mandala background
+    h('div', { className: 'mandala-bg', id: 'mandalaBg', 'aria-hidden': 'true' },
+      h('svg', { viewBox: '0 0 400 400', xmlns: 'http://www.w3.org/2000/svg' },
+        ...mandalaPaths.map((d, i) =>
+          h('path', { key: i, d, className: 'mandala-stroke', style: { '--len': '1200' } })
+        )
+      )
+    ),
+    h('div', { className: 'max-w-[1440px] mx-auto px-6 md:px-12 relative z-[1]' },
       h('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-24' },
         // Left: Title
         h('div', null,
           h('p', { className: 'reveal text-xs font-medium tracking-[0.3em] uppercase text-accent mb-4' }, 'Philosophy'),
-          h('h2', { className: 'reveal section-title text-neutral-900 mb-8' }, 'Where Data\nMeets Marble'),
-          h('p', { className: 'reveal body-large text-neutral-600 mb-8' },
+          h('h2', {
+            className: 'reveal section-title mb-8',
+            style: { color: 'var(--text-primary)' },
+            'data-distort': 'true'
+          }, 'Where Data\nMeets Marble'),
+          h('p', {
+            className: 'reveal body-large mb-8 word-reveal',
+            style: { color: 'var(--text-secondary)' },
+            'data-word-reveal': 'true'
+          },
             'We believe that computation is the new chisel. Every algorithm carries within it the potential for beauty \u2014 the capacity to carve meaning from entropy, to sculpt light from logic. The Obsidian Archive exists at this intersection: where the rigor of code meets the fluidity of artistic vision.'
           ),
-          h('p', { className: 'reveal body-large text-neutral-500' },
+          h('p', {
+            className: 'reveal body-large word-reveal',
+            style: { color: 'var(--text-muted)' },
+            'data-word-reveal': 'true'
+          },
             'Our generative process begins with a single constraint \u2014 a rule, a rhythm, a mathematical truth \u2014 and through iteration and emergence, we arrive at forms that feel both inevitable and surprising. Each sculpture is a dialogue between intention and accident, between the deterministic and the sublime.'
           )
         ),
         // Right: Stats
         h('div', { className: 'flex flex-col justify-center' },
           h('div', { className: 'grid grid-cols-2 gap-8' },
-            ...[
-              { number: '47', label: 'Sculptures Generated', sub: 'and counting' },
-              { number: '12', label: 'Algorithmic Systems', sub: 'unique processes' },
-              { number: '3.2M', label: 'Vertices Computed', sub: 'across all works' },
-              { number: '\u221E', label: 'Possible Variations', sub: 'infinite generativity' },
-            ].map((stat, i) =>
-              h('div', { key: i, className: 'reveal border border-neutral-300/60 rounded-sm p-6 md:p-8' },
-                h('p', { className: 'stat-number text-4xl md:text-5xl font-bold text-accent mb-2' }, stat.number),
-                h('p', { className: 'text-sm font-medium text-neutral-800 mb-1' }, stat.label),
-                h('p', { className: 'text-xs text-neutral-400' }, stat.sub)
+            ...statsData.map((stat, i) =>
+              h('div', { key: i, className: 'reveal border rounded-sm p-6 md:p-8', style: { borderColor: 'var(--border-color)' } },
+                h('p', {
+                  className: 'stat-number text-4xl md:text-5xl font-bold text-accent mb-2',
+                  'data-countup': 'true',
+                  'data-target': stat.isInfinity ? '' : String(stat.number),
+                  'data-decimals': stat.decimals || 0,
+                  'data-suffix': stat.suffix || '',
+                  'data-is-infinity': stat.isInfinity ? 'true' : 'false'
+                }, stat.isInfinity ? '\u221E' : '0'),
+                h('p', { className: 'text-sm font-medium mb-1', style: { color: 'var(--text-primary)' } }, stat.label),
+                h('p', { className: 'text-xs', style: { color: 'var(--text-faint)' } }, stat.sub)
               )
             )
           )
@@ -952,18 +2503,18 @@ function ProcessSection() {
     { num: '04', title: 'Eternalize', description: 'The chosen form is rendered at impossible resolution, preserved as an immutable digital artifact. A sculpture that exists outside time, viewable from every angle, forever pristine.' },
   ];
 
-  return h('section', { className: 'py-24 md:py-40 border-t border-neutral-300/50', id: 'process' },
+  return h('section', { className: 'py-24 md:py-40 border-t', id: 'process', style: { borderColor: 'var(--border-color)' } },
     h('div', { className: 'max-w-[1440px] mx-auto px-6 md:px-12' },
       h('div', { className: 'text-center mb-16 md:mb-24' },
         h('p', { className: 'reveal text-xs font-medium tracking-[0.3em] uppercase text-accent mb-4' }, 'Our Process'),
-        h('h2', { className: 'reveal section-title text-neutral-900' }, 'From Equation\nto Eternity')
+        h('h2', { className: 'reveal section-title', style: { color: 'var(--text-primary)' } }, 'From Equation\nto Eternity')
       ),
       h('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 stagger-children' },
         ...steps.map(step =>
           h('div', { key: step.num, className: 'reveal group' },
-            h('span', { className: 'text-6xl font-extralight text-neutral-300 group-hover:text-accent/20 transition-colors duration-500' }, step.num),
-            h('h3', { className: 'text-xl font-semibold text-neutral-900 mt-4 mb-3' }, step.title),
-            h('p', { className: 'text-sm text-neutral-500 leading-relaxed' }, step.description)
+            h('span', { className: 'text-6xl font-extralight transition-colors duration-500', style: { color: 'var(--text-ghost)' } }, step.num),
+            h('h3', { className: 'text-xl font-semibold mt-4 mb-3', style: { color: 'var(--text-primary)' } }, step.title),
+            h('p', { className: 'text-sm leading-relaxed', style: { color: 'var(--text-muted)' } }, step.description)
           )
         )
       )
@@ -973,19 +2524,23 @@ function ProcessSection() {
 
 // ── Featured Piece Section ──
 function FeaturedSection() {
-  return h('section', { className: 'py-24 md:py-40 border-t border-neutral-300/50' },
+  return h('section', { className: 'py-24 md:py-40 border-t', style: { borderColor: 'var(--border-color)' } },
     h('div', { className: 'max-w-[1440px] mx-auto px-6 md:px-12' },
       h('div', { className: 'grid grid-cols-1 lg:grid-cols-5 gap-8 md:gap-12 items-center' },
-        // Image
-        h('div', { className: 'reveal-scale lg:col-span-3' },
-          h('div', { className: 'pattern-container aspect-[16/10] relative group' },
-            h('div', { className: 'grid-item-img w-full h-full' },
-              h(PatternVortex, { width: 960, height: 600, color: '#dc2626' })
+        // Image — wrapped in FEATURE 16 tilt-3d-card
+        h('div', { className: 'reveal-scale lg:col-span-3 tilt-3d-wrap' },
+          h('div', {
+            className: 'tilt-3d-card pattern-container aspect-[16/10] relative group',
+            'data-tilt': 'true'
+          },
+            h('div', { className: 'grid-item-img w-full h-full tilt-layer tilt-layer-1' },
+              h(PatternSVG, { type: 'vortex', width: 960, height: 600, color: '#dc2626' })
             ),
-            h('div', { className: 'grid-item-overlay absolute inset-0 bg-gradient-to-r from-neutral-900/50 to-transparent flex items-end p-8 md:p-12' },
+            h('div', { className: 'tilt-shine' }),
+            h('div', { className: 'grid-item-overlay absolute inset-0 flex items-end p-8 md:p-12 tilt-layer tilt-layer-2', style: { background: 'linear-gradient(to right, var(--overlay-soft), transparent)' } },
               h('div', null,
                 h('p', { className: 'text-[10px] tracking-[0.2em] uppercase text-accent mb-3' }, 'Featured Work \u2014 2026'),
-                h('h3', { className: 'text-3xl md:text-4xl font-bold text-neutral-100' }, 'Void Convergence')
+                h('h3', { className: 'text-3xl md:text-4xl font-bold', style: { color: 'var(--overlay-text)' } }, 'Void Convergence')
               )
             )
           )
@@ -993,14 +2548,31 @@ function FeaturedSection() {
         // Text
         h('div', { className: 'reveal-right lg:col-span-2' },
           h('p', { className: 'text-xs font-medium tracking-[0.3em] uppercase text-accent mb-6' }, 'Featured Sculpture'),
-          h('h2', { className: 'text-3xl md:text-4xl font-bold text-neutral-900 mb-6 leading-tight' }, 'A universe compressed into a single point of light'),
-          h('p', { className: 'body-large text-neutral-600 mb-8' },
+          h('h2', {
+            className: 'text-3xl md:text-4xl font-bold mb-6 leading-tight',
+            style: { color: 'var(--text-primary)' },
+            'data-distort': 'true'
+          }, 'A universe compressed into a single point of light'),
+          h('p', { className: 'body-large mb-8', style: { color: 'var(--text-secondary)' } },
             'Void Convergence represents the culmination of three years of algorithmic research. Born from a deconstructed gravitational simulation, it captures the exact moment where 10,000 virtual particles achieve synchrony \u2014 a digital big bang in reverse, where chaos resolves into crystalline order.'
           ),
           h('a', {
-            href: '#',
-            className: 'magnetic-btn interactive inline-flex items-center gap-3 px-8 py-4 border border-accent text-accent text-xs tracking-[0.2em] uppercase hover:bg-accent hover:text-[#f4f3ef] transition-all duration-400 rounded-sm',
-            'data-magnetic': 'true'
+            href: '#archive',
+            className: 'magnetic-btn interactive inline-flex items-center gap-3 px-8 py-4 border border-accent text-accent text-xs tracking-[0.2em] uppercase hover:bg-accent transition-all duration-400 rounded-sm',
+            'data-magnetic': 'true',
+            'data-burst': 'true',
+            style: { '--hover-text': 'var(--bg-primary)' },
+            onClick: (e) => {
+              e.preventDefault();
+              const target = document.getElementById('archive');
+              if (target) {
+                if (window.__lenis) {
+                  window.__lenis.scrollTo(target, { offset: -80 });
+                } else {
+                  target.scrollIntoView({ behavior: 'smooth' });
+                }
+              }
+            }
           }, 'Explore Collection',
             h('svg', { width: '14', height: '14', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', className: 'ml-1' },
               h('path', { d: 'M5 12h14M12 5l7 7-7 7' })
@@ -1014,23 +2586,27 @@ function FeaturedSection() {
 
 // ── CTA / Contact Section ──
 function ContactSection() {
-  return h('section', { className: 'py-24 md:py-40 border-t border-neutral-300/50', id: 'contact' },
+  return h('section', { className: 'py-24 md:py-40 border-t', id: 'contact', style: { borderColor: 'var(--border-color)' } },
     h('div', { className: 'max-w-[1440px] mx-auto px-6 md:px-12 text-center' },
       h('p', { className: 'reveal text-xs font-medium tracking-[0.3em] uppercase text-accent mb-6' }, 'Commission a Piece'),
-      h('h2', { className: 'reveal section-title text-neutral-900 mb-8' }, 'Let Us Sculpt\nYour Vision'),
-      h('p', { className: 'reveal body-large text-neutral-500 max-w-2xl mx-auto mb-12' },
+      h('h2', { className: 'reveal section-title mb-8', style: { color: 'var(--text-primary)' } }, 'Let Us Sculpt\nYour Vision'),
+      h('p', { className: 'reveal body-large max-w-2xl mx-auto mb-12', style: { color: 'var(--text-muted)' } },
         'Every collaboration begins with a conversation. Tell us about the reality you wish to compute \u2014 the emotion you want to crystallize into form. We will design the algorithm that brings it into being.'
       ),
       h('div', { className: 'reveal flex flex-col sm:flex-row items-center justify-center gap-4' },
         h('a', {
           href: 'mailto:studio@obsidianarchive.art',
-          className: 'magnetic-btn interactive inline-flex items-center gap-3 px-10 py-5 bg-accent text-[#f4f3ef] text-xs tracking-[0.2em] uppercase font-semibold hover:bg-accent-hover transition-all duration-300 rounded-sm',
-          'data-magnetic': 'true'
+          className: 'magnetic-btn interactive inline-flex items-center gap-3 px-10 py-5 bg-accent text-xs tracking-[0.2em] uppercase font-semibold hover:bg-accent-hover transition-all duration-300 rounded-sm',
+          'data-magnetic': 'true',
+          'data-burst': 'true',
+          style: { color: 'var(--bg-primary)' }
         }, 'Begin a Conversation'),
         h('a', {
           href: '#archive',
-          className: 'magnetic-btn interactive inline-flex items-center gap-3 px-10 py-5 border border-neutral-400 text-neutral-700 text-xs tracking-[0.2em] uppercase font-medium hover:border-accent hover:text-accent transition-all duration-300 rounded-sm',
-          'data-magnetic': 'true'
+          className: 'magnetic-btn interactive inline-flex items-center gap-3 px-10 py-5 border text-xs tracking-[0.2em] uppercase font-medium hover:border-accent hover:text-accent transition-all duration-300 rounded-sm',
+          'data-magnetic': 'true',
+          'data-burst': 'true',
+          style: { borderColor: 'var(--border-strong)', color: 'var(--text-secondary)' }
         }, 'View Archive')
       )
     )
@@ -1039,25 +2615,84 @@ function ContactSection() {
 
 // ── Footer ──
 function Footer() {
-  return h('footer', { className: 'border-t border-neutral-300/50 py-12' },
+  return h('footer', { className: 'border-t py-12', style: { borderColor: 'var(--border-color)' } },
     h('div', { className: 'max-w-[1440px] mx-auto px-6 md:px-12' },
       h('div', { className: 'flex flex-col md:flex-row items-center justify-between gap-6' },
         h('div', { className: 'flex items-center gap-3' },
-          h('div', { className: 'w-6 h-6 border border-neutral-400 rounded-sm flex items-center justify-center' },
+          h('div', { className: 'w-6 h-6 border rounded-sm flex items-center justify-center', style: { borderColor: 'var(--border-strong)' } },
             h('div', { className: 'w-2 h-2 bg-accent rounded-[1px]' })
           ),
-          h('span', { className: 'text-xs tracking-[0.15em] uppercase text-neutral-400' }, 'The Obsidian Archive')
+          h('span', { className: 'text-xs tracking-[0.15em] uppercase', style: { color: 'var(--text-faint)' } }, 'The Obsidian Archive')
+        ),
+        // FEATURE 18: Live clock + time-of-day greeting
+        h('div', { className: 'text-center', id: 'footerClockWrap' },
+          h('div', { className: 'footer-greeting', id: 'footerGreeting' }, 'Welcome, observer'),
+          h('div', { className: 'footer-clock', id: 'footerClock', style: { color: 'var(--text-secondary)' } }, '\u00A0')
         ),
         h('div', { className: 'flex items-center gap-8' },
-          ...['Instagram', 'Behance', 'Twitter'].map(s =>
+          ...[
+            { label: 'Instagram', href: 'https://www.instagram.com/' },
+            { label: 'Behance', href: 'https://www.behance.net/' },
+            { label: 'Twitter', href: 'https://twitter.com/' },
+          ].map(s =>
             h('a', {
-              key: s,
-              href: '#',
-              className: 'interactive text-xs tracking-[0.1em] uppercase text-neutral-400 hover:text-accent transition-colors duration-300 nav-link'
-            }, s)
+              key: s.label,
+              href: s.href,
+              target: '_blank',
+              rel: 'noopener noreferrer',
+              className: 'interactive text-xs tracking-[0.1em] uppercase hover:text-accent transition-colors duration-300 nav-link',
+              style: { color: 'var(--text-faint)' }
+            }, s.label)
           )
         ),
-        h('p', { className: 'text-xs text-neutral-300' }, '\u00A9 2026 Obsidian Archive. All rights reserved.')
+        h('p', { className: 'text-xs', style: { color: 'var(--text-ghost)' } }, '\u00A9 2026 Obsidian Archive. All rights reserved.')
+      )
+    )
+  );
+}
+
+// ── Horizontal Gallery Section (FEATURE 11: pinned horizontal scroll) ──
+function HorizontalGallerySection() {
+  // Detailed close-ups of portfolio items (re-uses portfolio data with longer descriptions)
+  const panels = [
+    { num: '01', title: 'Void Convergence', note: 'Detail · Gravitational Mesh', patternType: 'vortex' },
+    { num: '02', title: 'Fractured Meridian', note: 'Detail · Lattice Studies', patternType: 'grid' },
+    { num: '03', title: 'Tidal Resonance', note: 'Detail · Wave Propagation', patternType: 'waves' },
+    { num: '04', title: 'Crystalline Topology', note: 'Detail · Facet Geometry', patternType: 'facets' },
+    { num: '05', title: 'Orbital Decay', note: 'Detail · Concentric Orbits', patternType: 'rings' },
+    { num: '06', title: 'Hexagonal Drift', note: 'Detail · Honeycomb Drift', patternType: 'hex' },
+  ];
+  return h('section', { className: 'horizontal-section', id: 'gallery' },
+    h('div', { className: 'horizontal-pin' },
+      h('div', { className: 'horizontal-heading' },
+        h('p', { className: 'text-xs font-medium tracking-[0.3em] uppercase text-accent mb-3' }, 'Detail Studies'),
+        h('h2', {
+          className: 'text-3xl md:text-5xl font-bold leading-none',
+          style: { color: 'var(--text-primary)' },
+          'data-distort': 'true'
+        }, 'In Close-Up')
+      ),
+      h('div', { className: 'horizontal-track', id: 'horizontalTrack' },
+        ...panels.map((p, i) =>
+          h('div', {
+            key: p.num,
+            className: 'horizontal-panel',
+            'data-scroll-blur': 'true'
+          },
+            h('div', { className: 'panel-num' }, p.num + ' / ' + String(panels.length).padStart(2, '0')),
+            h('div', { className: 'grid-item-img w-full h-full' },
+              h(PatternSVG, { type: p.patternType, width: 720, height: 540, color: '#dc2626' })
+            ),
+            h('div', { className: 'absolute inset-0', style: { background: 'linear-gradient(to top, rgba(10,10,10,0.85), rgba(10,10,10,0.2) 40%, transparent)' } }),
+            h('div', { className: 'panel-meta' },
+              h('p', { className: 'text-[10px] tracking-[0.25em] uppercase text-accent mb-2' }, p.note),
+              h('h3', { className: 'text-2xl md:text-3xl font-semibold', style: { color: 'var(--overlay-text)' } }, p.title)
+            )
+          )
+        )
+      ),
+      h('div', { className: 'horizontal-progress-track' },
+        h('div', { className: 'horizontal-progress-fill', id: 'horizontalProgress' })
       )
     )
   );
@@ -1074,6 +2709,7 @@ function App() {
         smooth: true,
         smoothTouch: false,
       });
+      window.__lenis = lenis;
 
       function raf(time) {
         lenis.raf(time);
@@ -1208,6 +2844,807 @@ function App() {
         canvas.style.width = '100%';
         canvas.style.height = rect.height + 'px';
       }
+
+      // ════════════════════════════════════════════════════════════════
+      // FEATURE 5: ACTIVE SECTION AUTO-TRACKING in Navigation
+      // ════════════════════════════════════════════════════════════════
+      const sections = document.querySelectorAll('section[id]');
+      const navLinks = document.querySelectorAll('[data-nav-target]');
+      if (sections.length && navLinks.length) {
+        const navObserver = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              const id = entry.target.id;
+              navLinks.forEach(link => {
+                if (link.getAttribute('data-nav-target') === id) {
+                  link.classList.add('active');
+                } else {
+                  link.classList.remove('active');
+                }
+              });
+            }
+          });
+        }, { threshold: 0.3, rootMargin: '-80px 0px -50% 0px' });
+        sections.forEach(s => navObserver.observe(s));
+      }
+
+      // ════════════════════════════════════════════════════════════════
+      // FEATURE 4: COUNT-UP STATS ANIMATION
+      // ════════════════════════════════════════════════════════════════
+      const countEls = document.querySelectorAll('[data-countup="true"]');
+      function animateCount(el) {
+        if (el.dataset.countupDone === 'true') return;
+        el.dataset.countupDone = 'true';
+        if (el.dataset.isInfinity === 'true') {
+          el.textContent = '\u221E';
+          return;
+        }
+        const target = parseFloat(el.dataset.target);
+        const decimals = parseInt(el.dataset.decimals || '0');
+        const suffix = el.dataset.suffix || '';
+        const duration = 1800;
+        const start = performance.now();
+        function step(now) {
+          const elapsed = now - start;
+          const t = Math.min(1, elapsed / duration);
+          const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+          const current = target * eased;
+          el.textContent = current.toFixed(decimals) + suffix;
+          if (t < 1) requestAnimationFrame(step);
+          else el.textContent = target.toFixed(decimals) + suffix;
+        }
+        requestAnimationFrame(step);
+      }
+      if (countEls.length) {
+        const countObserver = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              animateCount(entry.target);
+              countObserver.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.5 });
+        countEls.forEach(el => countObserver.observe(el));
+      }
+
+      // ════════════════════════════════════════════════════════════════
+      // FEATURE 6: ACCESSIBLE LIGHTBOX MODAL
+      // ════════════════════════════════════════════════════════════════
+      const lightbox = document.getElementById('lightbox');
+      const lbImage = document.getElementById('lightboxImage');
+      const lbTitle = document.getElementById('lightboxTitle');
+      const lbCategory = document.getElementById('lightboxCategory');
+      const lbDescription = document.getElementById('lightboxDescription');
+      const lbCounter = document.getElementById('lightboxCounter');
+      const lbClose = document.getElementById('lightboxClose');
+      const lbPrev = document.getElementById('lightboxPrev');
+      const lbNext = document.getElementById('lightboxNext');
+      let lbCurrentIndex = 0;
+      let lbLastFocus = null;
+
+      function openLightbox(index) {
+        lbCurrentIndex = ((index % portfolioItems.length) + portfolioItems.length) % portfolioItems.length;
+        const item = portfolioItems[lbCurrentIndex];
+        lbLastFocus = document.activeElement;
+        lbImage.innerHTML = buildPatternSVG(item.patternType, 1000, 750, item.color);
+        lbTitle.textContent = item.title;
+        lbCategory.textContent = item.category;
+        lbDescription.textContent = item.description;
+        lbCounter.textContent = String(lbCurrentIndex + 1).padStart(2, '0') + ' / ' + String(portfolioItems.length).padStart(2, '0');
+        lightbox.classList.add('open');
+        document.body.style.overflow = 'hidden';
+        if (window.__lenis) window.__lenis.stop();
+        setTimeout(() => lbClose.focus(), 100);
+      }
+      function closeLightbox() {
+        lightbox.classList.remove('open');
+        document.body.style.overflow = '';
+        if (window.__lenis) window.__lenis.start();
+        if (lbLastFocus) lbLastFocus.focus();
+      }
+      function navLightbox(dir) {
+        openLightbox(lbCurrentIndex + dir);
+      }
+
+      // Bind click on grid items
+      document.querySelectorAll('[data-lightbox-index]').forEach(el => {
+        el.addEventListener('click', (e) => {
+          // Don't trigger if user clicked a link inside
+          if (e.target.closest('a[href]') && !e.target.closest('a[href^="#"]')) return;
+          const idx = parseInt(el.getAttribute('data-lightbox-index'));
+          openLightbox(idx);
+        });
+        el.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            const idx = parseInt(el.getAttribute('data-lightbox-index'));
+            openLightbox(idx);
+          }
+        });
+      });
+
+      lbClose.addEventListener('click', closeLightbox);
+      lbPrev.addEventListener('click', () => navLightbox(-1));
+      lbNext.addEventListener('click', () => navLightbox(1));
+      lightbox.addEventListener('click', (e) => {
+        if (e.target === lightbox) closeLightbox();
+      });
+      document.addEventListener('keydown', (e) => {
+        if (!lightbox.classList.contains('open')) return;
+        if (e.key === 'Escape') closeLightbox();
+        else if (e.key === 'ArrowLeft') navLightbox(-1);
+        else if (e.key === 'ArrowRight') navLightbox(1);
+      });
+
+      // Touch swipe support
+      let touchStartX = 0;
+      lightbox.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+      }, { passive: true });
+      lightbox.addEventListener('touchend', (e) => {
+        const dx = e.changedTouches[0].clientX - touchStartX;
+        if (Math.abs(dx) > 60) {
+          navLightbox(dx > 0 ? -1 : 1);
+        }
+      }, { passive: true });
+
+      // ════════════════════════════════════════════════════════════════
+      // FEATURE 2: GLSL LIQUID DISTORTION hover on portfolio items
+      // Uses a lightweight canvas 2D ripple fallback that mimics the effect
+      // when WebGL shader isn't feasible per-grid-item. Falls back gracefully.
+      // ════════════════════════════════════════════════════════════════
+      const webglItems = document.querySelectorAll('[data-webgl-item]');
+      webglItems.forEach(item => {
+        const fallback = item.querySelector('.grid-fallback');
+        if (!fallback) return;
+        let rippleCanvas = null;
+        let rippleCtx = null;
+        let ripples = [];
+        let animFrame = null;
+        let lastMoveTime = 0;
+
+        function ensureCanvas() {
+          if (rippleCanvas) return;
+          rippleCanvas = document.createElement('canvas');
+          rippleCanvas.style.position = 'absolute';
+          rippleCanvas.style.top = '0';
+          rippleCanvas.style.left = '0';
+          rippleCanvas.style.width = '100%';
+          rippleCanvas.style.height = '100%';
+          rippleCanvas.style.pointerEvents = 'none';
+          rippleCanvas.style.zIndex = '2';
+          rippleCanvas.style.mixBlendMode = 'overlay';
+          item.appendChild(rippleCanvas);
+          rippleCtx = rippleCanvas.getContext('2d');
+          resizeCanvas();
+        }
+
+        function resizeCanvas() {
+          if (!rippleCanvas) return;
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          const rect = item.getBoundingClientRect();
+          rippleCanvas.width = Math.max(1, rect.width * dpr);
+          rippleCanvas.height = Math.max(1, rect.height * dpr);
+          rippleCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        function animateRipple() {
+          if (!rippleCtx) return;
+          const rect = item.getBoundingClientRect();
+          rippleCtx.clearRect(0, 0, rect.width, rect.height);
+          for (let i = ripples.length - 1; i >= 0; i--) {
+            const r = ripples[i];
+            r.radius += 2.5;
+            r.alpha -= 0.012;
+            if (r.alpha <= 0) {
+              ripples.splice(i, 1);
+              continue;
+            }
+            rippleCtx.beginPath();
+            rippleCtx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+            rippleCtx.strokeStyle = `rgba(220, 38, 38, ${r.alpha * 0.6})`;
+            rippleCtx.lineWidth = 2;
+            rippleCtx.stroke();
+            // Inner soft ring
+            rippleCtx.beginPath();
+            rippleCtx.arc(r.x, r.y, r.radius * 0.6, 0, Math.PI * 2);
+            rippleCtx.strokeStyle = `rgba(255, 255, 255, ${r.alpha * 0.3})`;
+            rippleCtx.lineWidth = 1;
+            rippleCtx.stroke();
+          }
+          if (ripples.length > 0) {
+            animFrame = requestAnimationFrame(animateRipple);
+          } else {
+            animFrame = null;
+          }
+        }
+
+        item.addEventListener('mouseenter', () => {
+          ensureCanvas();
+        });
+        item.addEventListener('mousemove', (e) => {
+          ensureCanvas();
+          const now = performance.now();
+          if (now - lastMoveTime < 60) return; // throttle
+          lastMoveTime = now;
+          const rect = item.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          ripples.push({ x, y, radius: 0, alpha: 1 });
+          if (ripples.length > 8) ripples.shift();
+          if (!animFrame) animFrame = requestAnimationFrame(animateRipple);
+        });
+        item.addEventListener('mouseleave', () => {
+          // Let existing ripples fade out naturally
+        });
+        window.addEventListener('resize', resizeCanvas);
+      });
+
+      // ════════════════════════════════════════════════════════════════
+      // FEATURE 11: PINNED HORIZONTAL-SCROLL GALLERY
+      // Vertical scroll inside .horizontal-section translates the inner
+      // .horizontal-track horizontally.
+      // ════════════════════════════════════════════════════════════════
+      const hSection = document.querySelector('.horizontal-section');
+      const hTrack = document.getElementById('horizontalTrack');
+      const hProgress = document.getElementById('horizontalProgress');
+      if (hSection && hTrack) {
+        function updateHorizontal() {
+          const rect = hSection.getBoundingClientRect();
+          const sectionHeight = hSection.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          // Scrollable distance within the section (after pin starts, before pin ends)
+          const scrollable = Math.max(1, sectionHeight - viewportHeight);
+          // How far we've progressed (0 → 1)
+          // rect.top goes from 0 (top of section hits top of viewport) to -scrollable
+          const progress = Math.max(0, Math.min(1, -rect.top / scrollable));
+          // Track width minus viewport width
+          const trackWidth = hTrack.scrollWidth;
+          const maxX = Math.max(0, trackWidth - window.innerWidth);
+          const translateX = -progress * maxX;
+          hTrack.style.transform = `translate3d(${translateX}px, 0, 0)`;
+          if (hProgress) hProgress.style.width = (progress * 100).toFixed(1) + '%';
+        }
+        updateHorizontal();
+        window.addEventListener('scroll', updateHorizontal, { passive: true });
+        window.addEventListener('resize', updateHorizontal);
+        // Also hook into Lenis if present
+        if (window.__lenis) {
+          window.__lenis.on('scroll', updateHorizontal);
+        }
+      }
+
+      // ════════════════════════════════════════════════════════════════
+      // FEATURE 12: WEB AUDIO API AMBIENT SOUNDSCAPE
+      // Multi-oscillator drone with LFO-modulated lowpass filter.
+      // ════════════════════════════════════════════════════════════════
+      const audioBtn = document.getElementById('audioToggle');
+      let audioCtx = null, audioNodes = null, audioPlaying = false;
+      function initAudio() {
+        if (audioCtx) return;
+        try {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          const master = audioCtx.createGain();
+          master.gain.value = 0;
+          master.connect(audioCtx.destination);
+
+          // Lowpass filter with LFO modulation
+          const filter = audioCtx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.value = 700;
+          filter.Q.value = 6;
+          filter.connect(master);
+
+          // LFO modulates filter cutoff
+          const lfo = audioCtx.createOscillator();
+          lfo.frequency.value = 0.07;
+          const lfoGain = audioCtx.createGain();
+          lfoGain.gain.value = 350;
+          lfo.connect(lfoGain);
+          lfoGain.connect(filter.frequency);
+          lfo.start();
+
+          // Three oscillators — root, fifth, octave for a rich drone
+          const freqs = [55, 82.5, 110, 165]; // A1, E2, A2, E3
+          const oscs = freqs.map((f, i) => {
+            const o = audioCtx.createOscillator();
+            o.type = i % 2 === 0 ? 'sine' : 'triangle';
+            o.frequency.value = f;
+            // Slight detune for chorus effect
+            o.detune.value = (i - 1.5) * 4;
+            const g = audioCtx.createGain();
+            g.gain.value = 0.18 / freqs.length;
+            o.connect(g);
+            g.connect(filter);
+            o.start();
+            return o;
+          });
+
+          // Slow amplitude wobble on master
+          const ampLfo = audioCtx.createOscillator();
+          ampLfo.frequency.value = 0.04;
+          const ampLfoGain = audioCtx.createGain();
+          ampLfoGain.gain.value = 0.02;
+          ampLfo.connect(ampLfoGain);
+          ampLfoGain.connect(master.gain);
+          ampLfo.start();
+
+          audioNodes = { master, filter, oscs, lfo, ampLfo };
+        } catch (err) {
+          console.warn('Audio init failed', err);
+        }
+      }
+      function toggleAudio() {
+        if (!audioCtx) initAudio();
+        if (!audioCtx) return;
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        audioPlaying = !audioPlaying;
+        const target = audioPlaying ? 0.08 : 0;
+        audioNodes.master.gain.cancelScheduledValues(audioCtx.currentTime);
+        audioNodes.master.gain.linearRampToValueAtTime(target, audioCtx.currentTime + 1.2);
+        audioBtn.classList.toggle('playing', audioPlaying);
+      }
+      if (audioBtn) {
+        audioBtn.classList.add('ready');
+        audioBtn.addEventListener('click', toggleAudio);
+      }
+
+      // ════════════════════════════════════════════════════════════════
+      // FEATURE 13: KONAMI CODE EASTER EGG
+      // Sequence: ↑ ↑ ↓ ↓ ← → ← → B A
+      // ════════════════════════════════════════════════════════════════
+      const konamiSeq = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+      let konamiIdx = 0;
+      const konamiOverlay = document.getElementById('konamiOverlay');
+      let konamiActive = false;
+      function triggerKonami() {
+        if (konamiActive) return;
+        konamiActive = true;
+        konamiOverlay.classList.add('active');
+        // Spawn raining obsidian particles
+        const particleCount = 60;
+        const particles = [];
+        for (let i = 0; i < particleCount; i++) {
+          const p = document.createElement('div');
+          p.className = 'konami-particle';
+          const size = 6 + Math.random() * 16;
+          p.style.width = size + 'px';
+          p.style.height = size + 'px';
+          p.style.left = (Math.random() * 100) + 'vw';
+          p.style.top = '-40px';
+          p.innerHTML = `<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;opacity:${0.4 + Math.random() * 0.5}">
+            <polygon points="40,8 72,28 72,52 40,72 8,52 8,28" fill="none" stroke="#dc2626" stroke-width="2"/>
+            <polygon points="40,20 60,32 60,48 40,60 20,48 20,32" fill="#dc2626" opacity="0.5"/>
+          </svg>`;
+          konamiOverlay.appendChild(p);
+          particles.push({
+            el: p,
+            x: Math.random() * window.innerWidth,
+            y: -40 - Math.random() * 400,
+            vy: 1 + Math.random() * 3,
+            vx: (Math.random() - 0.5) * 1.5,
+            rot: Math.random() * 360,
+            vrot: (Math.random() - 0.5) * 6
+          });
+        }
+        const startTime = performance.now();
+        function animateParticles() {
+          const elapsed = performance.now() - startTime;
+          particles.forEach(p => {
+            p.y += p.vy;
+            p.x += p.vx;
+            p.rot += p.vrot;
+            p.el.style.transform = `translate(${p.x - window.innerWidth * parseFloat(p.el.style.left) / 100}px, ${p.y}px) rotate(${p.rot}deg)`;
+            // Use direct left/top positioning instead
+            p.el.style.left = p.x + 'px';
+            p.el.style.top = p.y + 'px';
+            p.el.style.transform = `rotate(${p.rot}deg)`;
+            if (p.y > window.innerHeight + 60) {
+              p.y = -60;
+              p.x = Math.random() * window.innerWidth;
+            }
+          });
+          if (elapsed < 5000) {
+            requestAnimationFrame(animateParticles);
+          } else {
+            // Fade out
+            konamiOverlay.classList.remove('active');
+            setTimeout(() => {
+              particles.forEach(p => p.el.remove());
+              konamiActive = false;
+            }, 600);
+          }
+        }
+        requestAnimationFrame(animateParticles);
+      }
+      document.addEventListener('keydown', (e) => {
+        // Ignore if user is typing in input
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+        if (key === konamiSeq[konamiIdx]) {
+          konamiIdx++;
+          if (konamiIdx === konamiSeq.length) {
+            konamiIdx = 0;
+            triggerKonami();
+          }
+        } else {
+          // Reset on mismatch (allow restarting)
+          konamiIdx = (key === konamiSeq[0]) ? 1 : 0;
+        }
+      });
+
+      // ════════════════════════════════════════════════════════════════
+      // FEATURE 14: CURSOR-REACTIVE TEXT DISTORTION
+      // For [data-distort] headings — splits into chars, displaces each
+      // char based on cursor proximity.
+      // ════════════════════════════════════════════════════════════════
+      if (!isTouchDevice) {
+        document.querySelectorAll('[data-distort]').forEach(heading => {
+          // Split text into char spans (preserve newlines)
+          const original = heading.textContent;
+          heading.textContent = '';
+          const chars = [];
+          // Handle multi-line: split by \n first
+          const lines = original.split('\n');
+          lines.forEach((line, lineIdx) => {
+            line.split('').forEach(ch => {
+              const span = document.createElement('span');
+              span.className = 'distort-char';
+              span.textContent = ch === ' ' ? '\u00A0' : ch;
+              heading.appendChild(span);
+              chars.push(span);
+            });
+            if (lineIdx < lines.length - 1) {
+              heading.appendChild(document.createElement('br'));
+            }
+          });
+
+          heading.addEventListener('mousemove', (e) => {
+            const rect = heading.getBoundingClientRect();
+            const mx = e.clientX;
+            const my = e.clientY;
+            chars.forEach(c => {
+              const cr = c.getBoundingClientRect();
+              const cx = cr.left + cr.width / 2;
+              const cy = cr.top + cr.height / 2;
+              const dx = cx - mx;
+              const dy = cy - my;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              const maxDist = 140;
+              if (dist < maxDist) {
+                const force = (1 - dist / maxDist) * 18;
+                const angle = Math.atan2(dy, dx);
+                const tx = Math.cos(angle) * force;
+                const ty = Math.sin(angle) * force - (1 - dist / maxDist) * 4;
+                c.style.transform = `translate(${tx}px, ${ty}px)`;
+                c.classList.add('distort-active');
+              } else {
+                c.style.transform = '';
+                c.classList.remove('distort-active');
+              }
+            });
+          });
+          heading.addEventListener('mouseleave', () => {
+            chars.forEach(c => {
+              c.style.transform = '';
+              c.classList.remove('distort-active');
+            });
+          });
+        });
+      }
+
+      // ════════════════════════════════════════════════════════════════
+      // FEATURE 15: LIVE-DRAWING SVG MANDALA — trigger stroke draw on scroll-in
+      // ════════════════════════════════════════════════════════════════
+      const mandala = document.getElementById('mandalaBg');
+      if (mandala) {
+        const mandalaObserver = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              // Stagger each path's draw by setting --len with incremental delay
+              const strokes = mandala.querySelectorAll('.mandala-stroke');
+              strokes.forEach((s, i) => {
+                const len = s.getTotalLength ? s.getTotalLength() : 1200;
+                s.style.setProperty('--len', len);
+                s.style.transitionDelay = (i * 80) + 'ms';
+              });
+              mandala.classList.add('drawn');
+              mandalaObserver.unobserve(mandala);
+            }
+          });
+        }, { threshold: 0.25 });
+        mandalaObserver.observe(mandala);
+      }
+
+      // ════════════════════════════════════════════════════════════════
+      // FEATURE 16: 3D PERSPECTIVE TILT CARD
+      // Mouse move over [data-tilt] rotates the card in 3D.
+      // ════════════════════════════════════════════════════════════════
+      if (!isTouchDevice) {
+        document.querySelectorAll('[data-tilt]').forEach(card => {
+          card.addEventListener('mousemove', (e) => {
+            const rect = card.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / rect.width; // 0..1
+            const y = (e.clientY - rect.top) / rect.height; // 0..1
+            const rotY = (x - 0.5) * 16; // -8deg .. +8deg
+            const rotX = -(y - 0.5) * 12;
+            card.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg) scale(1.02)`;
+            card.style.setProperty('--mx', (x * 100) + '%');
+            card.style.setProperty('--my', (y * 100) + '%');
+          });
+          card.addEventListener('mouseleave', () => {
+            card.style.transform = '';
+          });
+        });
+      }
+
+      // ════════════════════════════════════════════════════════════════
+      // FEATURE 17: WORD-BY-WORD REVEAL for [data-word-reveal] paragraphs
+      // ════════════════════════════════════════════════════════════════
+      document.querySelectorAll('[data-word-reveal]').forEach(para => {
+        const text = para.textContent;
+        para.textContent = '';
+        const words = text.split(/\s+/);
+        words.forEach((word, i) => {
+          const span = document.createElement('span');
+          span.className = 'word';
+          span.textContent = word;
+          span.style.transitionDelay = (i * 30) + 'ms';
+          para.appendChild(span);
+        });
+        const wrObserver = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('revealed');
+              wrObserver.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.3 });
+        wrObserver.observe(para);
+      });
+
+      // ════════════════════════════════════════════════════════════════
+      // FEATURE 18: FOOTER LIVE CLOCK + TIME-OF-DAY GREETING
+      // ════════════════════════════════════════════════════════════════
+      const clockEl = document.getElementById('footerClock');
+      const greetEl = document.getElementById('footerGreeting');
+      function pad2(n) { return String(n).padStart(2, '0'); }
+      function updateClock() {
+        const now = new Date();
+        const h = now.getHours();
+        const m = now.getMinutes();
+        const s = now.getSeconds();
+        if (clockEl) {
+          const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'local';
+          clockEl.textContent = `${pad2(h)}:${pad2(m)}:${pad2(s)} · ${tz}`;
+        }
+        if (greetEl) {
+          let greeting;
+          if (h < 5) greeting = 'Burning the midnight oil';
+          else if (h < 12) greeting = 'Good morning, observer';
+          else if (h < 17) greeting = 'Good afternoon, observer';
+          else if (h < 21) greeting = 'Good evening, observer';
+          else greeting = 'Good night, observer';
+          greetEl.textContent = greeting;
+        }
+      }
+      updateClock();
+      setInterval(updateClock, 1000);
+
+      // ════════════════════════════════════════════════════════════════
+      // FEATURE 19: COMMAND PALETTE (⌘K / Ctrl+K)
+      // Fuzzy-searchable overlay with section navigation + actions.
+      // ════════════════════════════════════════════════════════════════
+      const cmdkTrigger = document.getElementById('cmdkTrigger');
+      const cmdkPalette = document.getElementById('commandPalette');
+      const cmdkInput = document.getElementById('cmdkInput');
+      const cmdkList = document.getElementById('cmdkList');
+
+      const cmdkCommands = [
+        { group: 'Navigate', label: 'Hero', meta: 'Top', icon: 'home', action: () => scrollToId('hero') },
+        { group: 'Navigate', label: 'Archive', meta: 'Portfolio', icon: 'grid', action: () => scrollToId('archive') },
+        { group: 'Navigate', label: 'Philosophy', meta: 'Manifesto', icon: 'book', action: () => scrollToId('philosophy') },
+        { group: 'Navigate', label: 'Process', meta: 'Method', icon: 'stack', action: () => scrollToId('process') },
+        { group: 'Navigate', label: 'Detail Studies', meta: 'Gallery', icon: 'layers', action: () => scrollToId('gallery') },
+        { group: 'Navigate', label: 'Contact', meta: 'Commission', icon: 'mail', action: () => scrollToId('contact') },
+        { group: 'Actions', label: 'Toggle Theme', meta: 'Light/Dark', icon: 'sun', action: () => document.getElementById('themeToggle').click() },
+        { group: 'Actions', label: 'Toggle Ambient Sound', meta: 'Soundscape', icon: 'wave', action: () => { if (audioBtn) audioBtn.click(); } },
+        { group: 'Actions', label: 'Open Featured Lightbox', meta: 'Void Convergence', icon: 'eye', action: () => { const first = document.querySelector('[data-lightbox-index]'); if (first) first.click(); } },
+        ...portfolioItems.map((p, i) => ({
+          group: 'Sculptures',
+          label: p.title,
+          meta: p.category,
+          icon: 'box',
+          action: () => { const el = document.querySelector(`[data-lightbox-index="${i}"]`); if (el) el.click(); }
+        })),
+      ];
+
+      const cmdkIconSVGs = {
+        home: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>',
+        grid: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>',
+        book: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
+        stack: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>',
+        layers: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 22,8.5 12,15 2,8.5"/><polyline points="2,15.5 12,22 22,15.5"/></svg>',
+        mail: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 6L2 7"/></svg>',
+        sun: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>',
+        wave: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12c2-4 4-4 6 0s4 4 6 0 4-4 6 0 4 4 6 0"/></svg>',
+        eye: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+        box: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
+      };
+
+      function scrollToId(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (window.__lenis) {
+          window.__lenis.scrollTo(el, { offset: -80 });
+        } else {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
+
+      function fuzzyMatch(query, text) {
+        query = query.toLowerCase();
+        text = text.toLowerCase();
+        if (!query) return true;
+        let qi = 0;
+        for (let i = 0; i < text.length && qi < query.length; i++) {
+          if (text[i] === query[qi]) qi++;
+        }
+        return qi === query.length;
+      }
+
+      let cmdkActiveIndex = 0;
+      let cmdkFiltered = [];
+
+      function renderCmdk(query) {
+        cmdkFiltered = cmdkCommands.filter(c => fuzzyMatch(query, c.label + ' ' + c.meta + ' ' + c.group));
+        cmdkActiveIndex = 0;
+        // Group
+        const groups = {};
+        cmdkFiltered.forEach(c => {
+          if (!groups[c.group]) groups[c.group] = [];
+          groups[c.group].push(c);
+        });
+        cmdkList.innerHTML = '';
+        let flatIdx = 0;
+        Object.keys(groups).forEach(g => {
+          const label = document.createElement('div');
+          label.className = 'cmdk-group-label';
+          label.textContent = g;
+          cmdkList.appendChild(label);
+          groups[g].forEach(c => {
+            const item = document.createElement('div');
+            item.className = 'cmdk-item' + (flatIdx === 0 ? ' active' : '');
+            item.setAttribute('role', 'option');
+            item.dataset.idx = flatIdx;
+            item.innerHTML = `
+              <div class="cmdk-item-icon">${cmdkIconSVGs[c.icon] || cmdkIconSVGs.box}</div>
+              <div>${c.label}</div>
+              <div class="cmdk-item-meta">${c.meta}</div>
+            `;
+            item.addEventListener('mouseenter', () => {
+              cmdkActiveIndex = flatIdx;
+              updateActiveItem();
+            });
+            item.addEventListener('click', () => {
+              c.action();
+              closeCmdk();
+            });
+            cmdkList.appendChild(item);
+            flatIdx++;
+          });
+        });
+        if (cmdkFiltered.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'cmdk-group-label';
+          empty.style.padding = '1.5rem 1rem';
+          empty.style.textAlign = 'center';
+          empty.textContent = 'No results found';
+          cmdkList.appendChild(empty);
+        }
+      }
+
+      function updateActiveItem() {
+        cmdkList.querySelectorAll('.cmdk-item').forEach((el, i) => {
+          el.classList.toggle('active', parseInt(el.dataset.idx) === cmdkActiveIndex);
+        });
+        // Scroll into view
+        const active = cmdkList.querySelector('.cmdk-item.active');
+        if (active) active.scrollIntoView({ block: 'nearest' });
+      }
+
+      function openCmdk() {
+        cmdkPalette.classList.add('open');
+        cmdkInput.value = '';
+        renderCmdk('');
+        setTimeout(() => cmdkInput.focus(), 50);
+        if (window.__lenis) window.__lenis.stop();
+      }
+      function closeCmdk() {
+        cmdkPalette.classList.remove('open');
+        if (window.__lenis) window.__lenis.start();
+      }
+
+      cmdkTrigger.classList.add('ready');
+      cmdkTrigger.addEventListener('click', openCmdk);
+      cmdkPalette.addEventListener('click', (e) => {
+        if (e.target === cmdkPalette) closeCmdk();
+      });
+      cmdkInput.addEventListener('input', (e) => renderCmdk(e.target.value));
+      cmdkInput.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          cmdkActiveIndex = Math.min(cmdkFiltered.length - 1, cmdkActiveIndex + 1);
+          updateActiveItem();
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          cmdkActiveIndex = Math.max(0, cmdkActiveIndex - 1);
+          updateActiveItem();
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          if (cmdkFiltered[cmdkActiveIndex]) {
+            cmdkFiltered[cmdkActiveIndex].action();
+            closeCmdk();
+          }
+        } else if (e.key === 'Escape') {
+          closeCmdk();
+        }
+      });
+      document.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+          e.preventDefault();
+          if (cmdkPalette.classList.contains('open')) closeCmdk();
+          else openCmdk();
+        } else if (e.key === 'Escape' && cmdkPalette.classList.contains('open')) {
+          closeCmdk();
+        }
+      });
+
+      // ════════════════════════════════════════════════════════════════
+      // FEATURE 20: SCROLL-VELOCITY MOTION BLUR
+      // Track scroll velocity; apply blur+scale on [data-scroll-blur] when fast.
+      // ════════════════════════════════════════════════════════════════
+      let lastScrollY = window.scrollY;
+      let lastScrollTime = performance.now();
+      let velocityRAF = null;
+      const blurTargets = document.querySelectorAll('[data-scroll-blur]');
+      function tickVelocity() {
+        // Decay: remove active class after scrolling slows
+        let anyActive = false;
+        blurTargets.forEach(el => {
+          if (el.classList.contains('velocity-active')) {
+            // Will be removed by transition end
+            anyActive = true;
+          }
+        });
+        if (!anyActive) {
+          velocityRAF = null;
+          return;
+        }
+        velocityRAF = requestAnimationFrame(tickVelocity);
+      }
+      window.addEventListener('scroll', () => {
+        const now = performance.now();
+        const dt = Math.max(1, now - lastScrollTime);
+        const dy = Math.abs(window.scrollY - lastScrollY);
+        const velocity = dy / dt; // px per ms
+        lastScrollY = window.scrollY;
+        lastScrollTime = now;
+        // Velocity threshold ~ 1.5 px/ms
+        if (velocity > 1.5) {
+          const blurPx = Math.min(5, velocity * 1.2);
+          blurTargets.forEach(el => {
+            el.style.setProperty('--blur-px', blurPx.toFixed(1) + 'px');
+            el.classList.add('velocity-active');
+          });
+        }
+        // Schedule removal after a short delay
+        clearTimeout(window.__velocityTimeout);
+        window.__velocityTimeout = setTimeout(() => {
+          blurTargets.forEach(el => el.classList.remove('velocity-active'));
+        }, 150);
+      }, { passive: true });
+
     }, 500);
   }, []);
 
@@ -1219,6 +3656,7 @@ function App() {
       h(ArchiveSection),
       h(PhilosophySection),
       h(ProcessSection),
+      h(HorizontalGallerySection),
       h(FeaturedSection),
       h(ContactSection)
     ),
