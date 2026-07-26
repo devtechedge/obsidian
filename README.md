@@ -2,7 +2,7 @@
 
 Single-file immersive portfolio for a fictional generative digital sculpture studio. Twenty complex frontend features, Three.js crystal, Web Audio drone, command palette, and pinned horizontal gallery — all with zero build step.
 
-![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-black?logo=github)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-black?logo=github)](https://devtechedge.github.io/obsidian/)
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)
 ![Three.js](https://img.shields.io/badge/Three.js-0.160-black?logo=threedotjs)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-Play%20CDN-06b6d4?logo=tailwindcss)
@@ -17,14 +17,21 @@ Client-side only · zero build · open the single HTML file anywhere. Fully self
 
 ## Screenshots
 
-> Screenshots coming shortly — will live in `docs/screenshots/`.
+![Hero with 3D crystal](docs/screenshots/01-hero.jpg)
 
-<!-- Placeholder structure:
-![Hero with 3D crystal](docs/screenshots/01-hero.png)
-![Archive grid](docs/screenshots/02-archive.png)
-![Horizontal gallery / Featured](docs/screenshots/03-gallery.png)
-![Command palette](docs/screenshots/04-cmdk.png)
--->
+*Hero — Three.js crystal + particle field*
+
+![Archive grid](docs/screenshots/02-archive.jpg)
+
+*Archive — generative sculpture grid*
+
+![Philosophy section](docs/screenshots/03-philosophy.jpg)
+
+*Philosophy — live-drawing mandala + stats*
+
+![Dark contact](docs/screenshots/04-contact-dark.jpg)
+
+*Contact — dark theme*
 
 ## Features
 
