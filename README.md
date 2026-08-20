@@ -2,6 +2,7 @@
 
 Single-file immersive portfolio for a fictional generative digital sculpture studio. Twenty complex frontend features, Three.js crystal, Web Audio drone, command palette, and pinned horizontal gallery — all with zero build step.
 
+[![CI](https://github.com/devtechedge/obsidian/actions/workflows/ci.yml/badge.svg)](https://github.com/devtechedge/obsidian/actions/workflows/ci.yml)
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-black?logo=github)](https://devtechedge.github.io/obsidian/)
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)
 ![Three.js](https://img.shields.io/badge/Three.js-0.160-black?logo=threedotjs)
@@ -13,7 +14,9 @@ Single-file immersive portfolio for a fictional generative digital sculpture stu
 
 **https://devtechedge.github.io/obsidian/**
 
-Client-side only · zero build · open the single HTML file anywhere. Fully self-contained (React UMD + Tailwind Play CDN + Three.js + Lenis + Web Audio).
+> **Status:** Client-side only on GitHub Pages. Zero backend. Open `index.html` anywhere. CDNs (React / Three / Lenis) are version-pinned with SRI. Tailwind Play CDN remains a runtime compiler by design.
+
+Client-side only · zero build · fully self-contained (React UMD + Tailwind Play CDN + Three.js + Lenis + Web Audio).
 
 ## Screenshots
 
@@ -64,11 +67,18 @@ No bundler. No package manager. The file is the project.
 # Clone and open locally
 git clone https://github.com/devtechedge/obsidian.git
 cd obsidian
-# Just open index.html in a browser
+# Just open index.html in a browser — there is no build step
 
-# Or visit the live demo
-# https://devtechedge.github.io/obsidian/
+# Optional: CI tooling only
+npm ci
+npm test
+npx playwright install --with-deps chromium
+npm run test:e2e
 ```
+
+## Security
+
+Threat model, CDN pinning, CSP, and XSS notes: [SECURITY.md](SECURITY.md).
 
 ## License
 
