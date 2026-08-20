@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>The Obsidian Archive</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="referrer" content="strict-origin-when-cross-origin" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com; font-src https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self' https://cdn.tailwindcss.com; worker-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'" />
 
 <!-- Google Fonts: Inter Variable -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -30,15 +32,15 @@ tailwind.config = {
 }
 </script>
 
-<!-- React 18 UMD -->
-<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<!-- React 18.3.1 UMD (pinned + SRI) -->
+<script crossorigin="anonymous" integrity="sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z" src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin="anonymous" integrity="sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1" src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 
-<!-- Lenis Smooth Scroll -->
-<script src="https://unpkg.com/lenis@1.1.18/dist/lenis.min.js"></script>
+<!-- Lenis Smooth Scroll (pinned + SRI) -->
+<script crossorigin="anonymous" integrity="sha384-tKsJDT6PlUI0pSBt9/sBKJluKgA19/a6mBrDsZaXotLB4ZYfMGM6xt6/WgGpYhTm" src="https://unpkg.com/lenis@1.1.18/dist/lenis.min.js"></script>
 
-<!-- Three.js (UMD, module-free) -->
-<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<!-- Three.js (UMD, pinned + SRI) -->
+<script crossorigin="anonymous" integrity="sha384-qOkzR5Ke/XkQxuGVJ9hpFEpDlcoLtWwVYhnJf06cLIZa2vaIptSqaubivErzmD5O" src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
 
 <style>
   /* ── Reset & Base ── */
