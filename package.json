@@ -1,0 +1,13 @@
+{
+  "name": "obsidian-archive",
+  "private": true,
+  "description": "CI-only tooling. The live site is a single index.html with no build step.",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "test:e2e": "playwright test",
+    "serve": "node scripts/serve.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.55.1"
+  }
+}
