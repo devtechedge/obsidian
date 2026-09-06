@@ -1,6 +1,6 @@
 # Security Assessment — The Obsidian Archive
 
-**Date:** 2026-08-21  
+**Date:** 2026-09-06  
 **Scope:** Auth, XSS, injection, supply chain (CDN), secrets, CSP, localStorage  
 **Context:** Public site is a **single-file, client-side-only** GitHub Pages demo. There is **no backend**, no database, and no user accounts.
 
@@ -108,3 +108,11 @@ npm run test:e2e  # Chromium smokes against python http.server
 ```
 
 `package.json` is **CI-only**. The live site is still a single `index.html` with no bundler.
+
+## Repository visibility
+
+This repository is currently **public** for portfolio review. When the open-source
+build story is no longer needed, **the GitHub repo will go private**. Making the
+repo private reduces source disclosure; it does **not** replace strong production
+secrets, auth allow-lists, webhook signatures, or Vercel/Actions environment
+hygiene. Rotate any credential that was pasted into chat, tickets, or screenshots.
