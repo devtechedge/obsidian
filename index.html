@@ -1267,7 +1267,7 @@ tailwind.config = {
   }
 
   /* ════════════════════════════════════════════════════════════════
-     MOBILE MENU — full-screen overlay, fadeIn stagger for items
+     MOBILE MENU - full-screen overlay, fadeIn stagger for items
      ════════════════════════════════════════════════════════════════ */
   @keyframes mobileMenuFadeIn {
     from { opacity: 0; transform: translateY(12px); }
@@ -1680,7 +1680,7 @@ tailwind.config = {
   const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
   camera.position.set(0, 0, 8);
 
-  // Crystal geometry — icosahedron with wireframe overlay
+  // Crystal geometry - icosahedron with wireframe overlay
   const geo = new THREE.IcosahedronGeometry(2.4, 0);
   const wireGeo = new THREE.IcosahedronGeometry(2.42, 0);
 
@@ -1838,7 +1838,7 @@ tailwind.config = {
 })();
 
 // ═══════════════════════════════════════════════════════
-// HERO CANVAS — Abstract Floating Topology / Micro-Particles
+// HERO CANVAS - Abstract Floating Topology / Micro-Particles
 // Reacts to cursor movement, 60fps, low opacity
 // ═══════════════════════════════════════════════════════
 (function initHeroCanvas() {
@@ -1849,7 +1849,7 @@ tailwind.config = {
   let targetMouseX = 0, targetMouseY = 0;
   let animId;
 
-  // Particle pool — kept small for ARM64 performance
+  // Particle pool - kept small for ARM64 performance
   const PARTICLE_COUNT = 80;
   const CONNECTION_DIST = 140;
   const MOUSE_RADIUS = 200;
@@ -1965,7 +1965,7 @@ tailwind.config = {
     }
   }
 
-  // Abstract wave layer — slow undulating mesh
+  // Abstract wave layer - slow undulating mesh
   function drawWaveLayer(time) {
     const waveCount = 5;
     const rowSpacing = 60;
@@ -2162,11 +2162,11 @@ function PatternSVG(props) {
 // ── Portfolio Data ──
 const portfolioItems = [
   { id: 1, title: 'Void Convergence', category: 'Generative Sculpture', description: 'Where gravity folds upon itself, new dimensions emerge from the silence between particles.', patternType: 'vortex', color: '#dc2626', year: '2026', span: 'col-span-1 md:col-span-2' },
-  { id: 2, title: 'Fractured Meridian', category: 'Data Architecture', description: 'A lattice of fractured light — each shard a data point in an infinite regress of meaning.', patternType: 'grid', color: '#dc2626', year: '2025', span: 'col-span-1' },
+  { id: 2, title: 'Fractured Meridian', category: 'Data Architecture', description: 'A lattice of fractured light - each shard a data point in an infinite regress of meaning.', patternType: 'grid', color: '#dc2626', year: '2025', span: 'col-span-1' },
   { id: 3, title: 'Tidal Resonance', category: 'Algorithmic Flow', description: 'Rhythms computed by tides of entropy. The wave is the sculpture; the algorithm, the chisel.', patternType: 'waves', color: '#dc2626', year: '2025', span: 'col-span-1' },
-  { id: 4, title: 'Crystalline Topology', category: 'Geometric Abstraction', description: 'Facets of computed crystal — mathematics made mineral, logic given form.', patternType: 'facets', color: '#dc2626', year: '2024', span: 'col-span-1 md:col-span-2' },
+  { id: 4, title: 'Crystalline Topology', category: 'Geometric Abstraction', description: 'Facets of computed crystal - mathematics made mineral, logic given form.', patternType: 'facets', color: '#dc2626', year: '2024', span: 'col-span-1 md:col-span-2' },
   { id: 5, title: 'Orbital Decay', category: 'Kinetic System', description: 'Concentric paths of dying stars, their orbits inscribed in light and memory.', patternType: 'rings', color: '#dc2626', year: '2024', span: 'col-span-1' },
-  { id: 6, title: 'Hexagonal Drift', category: 'Structural Form', description: 'The honeycomb at the edge of chaos — order and disorder in perpetual negotiation.', patternType: 'hex', color: '#dc2626', year: '2023', span: 'col-span-1' },
+  { id: 6, title: 'Hexagonal Drift', category: 'Structural Form', description: 'The honeycomb at the edge of chaos - order and disorder in perpetual negotiation.', patternType: 'hex', color: '#dc2626', year: '2023', span: 'col-span-1' },
 ];
 
 // ── Navigation Component ──
@@ -2244,7 +2244,7 @@ function Navigation() {
           }, item)
         )
       ),
-      // Mobile menu button — sits ON TOP of the overlay (higher z-index)
+      // Mobile menu button - sits ON TOP of the overlay (higher z-index)
       h('button', {
         className: 'md:hidden interactive flex flex-col gap-1.5 relative z-[1100]',
         onClick: () => setMenuOpen(!menuOpen),
@@ -2256,7 +2256,7 @@ function Navigation() {
         h('span', { className: `w-4 h-[1.5px] bg-accent transition-all duration-300 ${menuOpen ? 'w-6 -rotate-45 -translate-y-[4.5px]' : ''}` })
       )
     ),
-    // Mobile Menu — FULL SCREEN overlay, covers entire viewport including top
+    // Mobile Menu - FULL SCREEN overlay, covers entire viewport including top
     menuOpen && h('div', {
       className: 'md:hidden fixed inset-0 z-[1050] flex flex-col overflow-y-auto',
       style: {
@@ -2285,7 +2285,7 @@ function Navigation() {
           h('span', { className: 'w-6 h-[1.5px] -rotate-45 -translate-y-[4.5px] bg-accent' })
         )
       ),
-      // Nav items — left-aligned, larger gap, generous padding, no truncation
+      // Nav items - left-aligned, larger gap, generous padding, no truncation
       h('div', { className: 'flex-1 flex flex-col justify-center px-6 py-8 gap-2 min-w-0' },
         h('p', { className: 'text-[10px] tracking-[0.3em] uppercase text-accent mb-6' }, 'Menu'),
         ...navItems.map((item, i) =>
@@ -2303,7 +2303,7 @@ function Navigation() {
           }, item)
         )
       ),
-      // Footer inside mobile menu — social links
+      // Footer inside mobile menu - social links
       h('div', { className: 'flex-shrink-0 px-6 py-8 flex flex-col gap-4 items-start' },
         h('div', { className: 'flex items-center gap-5 flex-wrap' },
           ...[
@@ -2566,7 +2566,7 @@ function FeaturedSection() {
   return h('section', { className: 'py-24 md:py-40 border-t', style: { borderColor: 'var(--border-color)' } },
     h('div', { className: 'max-w-[1440px] mx-auto px-6 md:px-12' },
       h('div', { className: 'grid grid-cols-1 lg:grid-cols-5 gap-8 md:gap-12 items-center' },
-        // Image — wrapped in FEATURE 16 tilt-3d-card
+        // Image - wrapped in FEATURE 16 tilt-3d-card
         h('div', { className: 'reveal-scale lg:col-span-3 tilt-3d-wrap' },
           h('div', {
             className: 'tilt-3d-card pattern-container aspect-[16/10] relative group',
@@ -3183,7 +3183,7 @@ function App() {
           lfoGain.connect(filter.frequency);
           lfo.start();
 
-          // Three oscillators — root, fifth, octave for a rich drone
+          // Three oscillators - root, fifth, octave for a rich drone
           const freqs = [55, 82.5, 110, 165]; // A1, E2, A2, E3
           const oscs = freqs.map((f, i) => {
             const o = audioCtx.createOscillator();
@@ -3314,7 +3314,7 @@ function App() {
 
       // ════════════════════════════════════════════════════════════════
       // FEATURE 14: CURSOR-REACTIVE TEXT DISTORTION
-      // For [data-distort] headings — splits into chars, displaces each
+      // For [data-distort] headings - splits into chars, displaces each
       // char based on cursor proximity.
       // ════════════════════════════════════════════════════════════════
       if (!isTouchDevice) {
@@ -3373,7 +3373,7 @@ function App() {
       }
 
       // ════════════════════════════════════════════════════════════════
-      // FEATURE 15: LIVE-DRAWING SVG MANDALA — trigger stroke draw on scroll-in
+      // FEATURE 15: LIVE-DRAWING SVG MANDALA - trigger stroke draw on scroll-in
       // ════════════════════════════════════════════════════════════════
       const mandala = document.getElementById('mandalaBg');
       if (mandala) {

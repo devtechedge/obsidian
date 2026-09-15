@@ -1,6 +1,6 @@
 # The Obsidian Archive
 
-Single-file immersive portfolio for a fictional generative digital sculpture studio. Twenty complex frontend features, Three.js crystal, Web Audio drone, command palette, and pinned horizontal gallery — all with zero build step.
+Single-file immersive portfolio for a fictional generative digital sculpture studio. Twenty complex frontend features, Three.js crystal, Web Audio drone, command palette, and pinned horizontal gallery - all with zero build step.
 
 [![CI](https://github.com/devtechedge/obsidian/actions/workflows/ci.yml/badge.svg)](https://github.com/devtechedge/obsidian/actions/workflows/ci.yml)
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-black?logo=github)](https://devtechedge.github.io/obsidian/)
@@ -22,23 +22,23 @@ Client-side only · zero build · fully self-contained (React UMD + Tailwind Pla
 
 ![Hero with 3D crystal](docs/screenshots/01-hero.jpg)
 
-*Hero — Three.js crystal + particle field*
+*Hero - Three.js crystal + particle field*
 
 ![Archive grid](docs/screenshots/02-archive.jpg)
 
-*Archive — generative sculpture grid*
+*Archive - generative sculpture grid*
 
 ![Philosophy section](docs/screenshots/03-philosophy.jpg)
 
-*Philosophy — live-drawing mandala + stats*
+*Philosophy - live-drawing mandala + stats*
 
 ![Dark contact](docs/screenshots/04-contact-dark.jpg)
 
-*Contact — dark theme*
+*Contact - dark theme*
 
 ## Features
 
-- **One file, zero build** — entire experience ships as a single `index.html` (~140 KB)
+- **One file, zero build** - entire experience ships as a single `index.html` (~140 KB)
 - **Three.js hero crystal** with custom GLSL shader + mouse-drag rotation
 - **Six generative SVG sculptures** (Vortex, Grid, Waves, Facets, Rings, Hex)
 - **Pinned horizontal-scroll gallery** driven by vertical scroll
@@ -67,7 +67,7 @@ No bundler. No package manager. The file is the project.
 # Clone and open locally
 git clone https://github.com/devtechedge/obsidian.git
 cd obsidian
-# Just open index.html in a browser — there is no build step
+# Just open index.html in a browser - there is no build step
 
 # Optional: CI tooling only
 npm ci

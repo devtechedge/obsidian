@@ -1,4 +1,4 @@
-# Security Assessment — The Obsidian Archive
+# Security Assessment - The Obsidian Archive
 
 **Date:** 2026-09-06  
 **Scope:** Auth, XSS, injection, supply chain (CDN), secrets, CSP, localStorage  
@@ -16,7 +16,7 @@
 | Injection (SQL / command) | **N/A** | No server, no SQL, no shell. Contact is `mailto:` only. |
 | Secrets in repo | **None** | No `.env`, no API keys, no tokens. |
 | CORS / network | **N/A** | No `fetch` / XHR. |
-| Supply chain | **Medium → reduced** | Runtime comes from CDNs (unpkg + Tailwind Play + Google Fonts). React / Lenis / Three.js are **version-pinned with SRI**. Tailwind Play CDN cannot take SRI (dynamic compiler) — accepted. |
+| Supply chain | **Medium → reduced** | Runtime comes from CDNs (unpkg + Tailwind Play + Google Fonts). React / Lenis / Three.js are **version-pinned with SRI**. Tailwind Play CDN cannot take SRI (dynamic compiler) - accepted. |
 | CSP | **Present (meta)** | GitHub Pages cannot set response headers. Meta CSP allows the known CDNs plus `'unsafe-inline'` / `'unsafe-eval'` required by Tailwind Play. |
 
 **Overall (public Pages demo):** Low residual risk. Browser-only art site, no auth boundary, no secrets, no form posts.
